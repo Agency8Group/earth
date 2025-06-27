@@ -45,7 +45,22 @@
             #container {
                 width: 100vw;
                 height: 100vh;
+                opacity: 0;
+                animation: fadeIn 4s ease-in-out forwards;
             }
+
+            /* 페이드인 애니메이션 */
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+
             #info {
                 position: absolute;
                 top: 20px;
@@ -53,6 +68,20 @@
                 color: white;
                 font-size: 18px;
                 z-index: 100;
+                opacity: 0;
+                animation: fadeInUp 3s ease-out 1s forwards;
+            }
+
+            /* 위에서 아래로 페이드인 */
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(-30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
             }
 
             /* 팀 카드 UI 스타일 */
@@ -81,6 +110,19 @@
             #teamCard.show {
                 opacity: 1;
                 visibility: visible;
+                animation: cardFadeIn 0.5s ease-out;
+            }
+
+            /* 카드 페이드인 애니메이션 */
+            @keyframes cardFadeIn {
+                from {
+                    opacity: 0;
+                    transform: translate(-50%, -50%) scale(0.8);
+                }
+                to {
+                    opacity: 1;
+                    transform: translate(-50%, -50%) scale(1);
+                }
             }
 
             .team-content {
@@ -281,8 +323,25 @@
                 text-align: center;
                 z-index: 50;
                 pointer-events: none;
-                opacity: 0.7;
+                opacity: 0;
+                animation: fadeInPulse 4s ease-out 2s forwards;
                 transition: all 0.5s ease;
+            }
+
+            /* 페이드인 + 펄스 애니메이션 */
+            @keyframes fadeInPulse {
+                0% {
+                    opacity: 0;
+                    transform: translate(-50%, -50%) scale(0.8);
+                }
+                50% {
+                    opacity: 0.7;
+                    transform: translate(-50%, -50%) scale(1.05);
+                }
+                100% {
+                    opacity: 0.7;
+                    transform: translate(-50%, -50%) scale(1);
+                }
             }
 
             .guide-text {
@@ -290,9 +349,24 @@
                     "Helvetica Neue", Arial, sans-serif;
                 font-size: 24px;
                 font-weight: 600;
-                color: rgba(255, 215, 0, 1);
-                text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+                color: rgba(255, 255, 255, 1);
+                text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
                 margin-bottom: 8px;
+                animation: gentleGlow 3s ease-in-out infinite;
+            }
+
+            /* 부드러운 반짝임 애니메이션 */
+            @keyframes gentleGlow {
+                0%,
+                100% {
+                    color: rgba(255, 255, 255, 0.8);
+                    text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+                }
+                50% {
+                    color: rgba(255, 255, 255, 1);
+                    text-shadow: 0 0 25px rgba(255, 255, 255, 1),
+                        0 0 35px rgba(255, 255, 255, 0.8);
+                }
             }
 
             .guide-subtext {
@@ -308,8 +382,9 @@
             /* 팀 카드가 표시될 때 안내 메시지 숨김 */
             #teamCard.show ~ #clickGuide,
             #teamCard.show + #clickGuide {
-                opacity: 0;
+                opacity: 0 !important;
                 transform: translate(-50%, -50%) scale(0.8);
+                pointer-events: none;
             }
         </style>
     </head>
@@ -318,8 +393,7 @@
 
         <!-- 클릭 안내 메시지 -->
         <div id="clickGuide">
-            <div class="guide-text">부서를 클릭해주세요</div>
-            <div class="guide-subtext">Click Team</div>
+            <div class="guide-text">Click on a team</div>
         </div>
 
         <!-- 팀 카드가 열릴 때 클릭 차단용 오버레이(4분할) -->
