@@ -1,6 +1,6 @@
 // Three.js 지구본 애플리케이션
 let scene, camera, renderer, earthGlobe, earthClouds;
-let rotationSpeed = 0.005;
+let rotationSpeed = 0.002;
 
 // 텍스트 스프라이트 관련 변수
 let letterSprites = [];
@@ -12,6 +12,12 @@ const orbitRadius = 2.8;
 let raycaster, mouse;
 let isHovering = false;
 let hoveredSprite = null;
+
+// 로딩 관리 변수
+let loadingManager;
+let totalAssets = 5; // 텍스처 개수
+let loadedAssets = 0;
+let isFullyLoaded = false; // 완전 로딩 상태 추적
 
 // 팀 정보 설정
 const teams = [
@@ -35,8 +41,89 @@ const teamDescriptions = [
     "브랜드 인지도 향상과 매출 성장을 위한 통합 마케팅을 기획합니다. 리뷰 기반 디지털 마케팅, 타겟 광고, 프로모션 전략을 통해 플랫폼 내 경쟁력을 확보합니다."
 ];
 
+// 로딩 진행률 업데이트 함수
+function updateProgress(loaded, total) {
+    // Three.js 라이브러리 로딩을 고려한 전체 진행률 계산
+    const libraryLoadingWeight = 0.3; // 라이브러리 로딩 비중
+    const textureLoadingWeight = 0.7; // 텍스처 로딩 비중
+    
+    const textureProgress = (loaded / total) * textureLoadingWeight;
+    const totalProgress = (libraryLoadingWeight + textureProgress) * 100;
+    
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    if (progressBar && progressText) {
+        progressBar.style.width = Math.min(totalProgress, 100) + '%';
+        progressText.textContent = Math.round(Math.min(totalProgress, 100)) + '%';
+    }
+}
+
+// 로딩 완료 처리 함수
+function onLoadingComplete() {
+    console.log('모든 텍스처 로딩 완료!');
+    
+    // 진행률을 100%로 설정
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    if (progressBar && progressText) {
+        progressBar.style.width = '100%';
+        progressText.textContent = '100%';
+    }
+    
+    // 추가 지연 시간 (3초) 후 로딩 화면 숨기기
+    setTimeout(() => {
+        console.log('추가 지연 시간 완료, 로딩 화면 숨김');
+        
+        // 로딩 화면 숨기기
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                isFullyLoaded = true; // 완전 로딩 상태로 설정
+                console.log('로딩 화면 완전히 숨김, 애니메이션 시작');
+            }, 500);
+        }
+        
+        // 애니메이션 루프 시작
+        animate();
+        
+    }, 3000); // 3초 추가 지연
+}
+
 // 초기화 함수
 function init() {
+    // Three.js 라이브러리 로딩 확인
+    if (typeof THREE === 'undefined') {
+        console.error('Three.js 라이브러리가 로딩되지 않았습니다.');
+        setTimeout(init, 100); // 100ms 후 다시 시도
+        return;
+    }
+    
+    console.log('Three.js 라이브러리 로딩 완료, 초기화 시작');
+    
+    // 로딩 매니저 설정
+    loadingManager = new THREE.LoadingManager();
+    
+    loadingManager.onProgress = function(url, loaded, total) {
+        loadedAssets = loaded;
+        updateProgress(loaded, total);
+        console.log(`로딩 진행률: ${loaded}/${total} - ${url}`);
+    };
+    
+    loadingManager.onLoad = function() {
+        console.log('모든 에셋 로딩 완료!');
+        onLoadingComplete();
+    };
+    
+    loadingManager.onError = function(url) {
+        console.error('로딩 에러:', url);
+        // 에러 발생 시에도 진행률 업데이트
+        loadedAssets++;
+        updateProgress(loadedAssets, totalAssets);
+    };
+
     // 씬 생성
     scene = new THREE.Scene();
     
@@ -101,9 +188,6 @@ function init() {
     
     // 윈도우 리사이즈 이벤트
     window.addEventListener('resize', onWindowResize);
-    
-    // 애니메이션 루프 시작
-    animate();
 }
 
 // 우주 환경 생성 함수
@@ -235,69 +319,175 @@ function loadEarthGlobe() {
     // 환경에 따라 다른 경로 사용
     const texturePath = isGitHubPages ? '' : 'public/textures/';
     
+    // 디바이스 성능 감지
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isLowEndDevice = navigator.hardwareConcurrency <= 4;
+    
     console.log('현재 환경:', isGitHubPages ? 'GitHub Pages' : '로컬');
+    console.log('디바이스 타입:', isMobile ? '모바일' : '데스크톱');
+    console.log('성능 레벨:', isLowEndDevice ? '낮음' : '높음');
     console.log('텍스처 경로:', texturePath);
     
-    // 텍스처 로더
-    const textureLoader = new THREE.TextureLoader();
+    // 로딩 매니저를 사용한 텍스처 로더
+    const textureLoader = new THREE.TextureLoader(loadingManager);
     
-    // 지구본 텍스처들 로드
-    const dayTexture = textureLoader.load(texturePath + '8k_earth_daymap.jpg');
-    const nightTexture = textureLoader.load(texturePath + '8k_earth_nightmap.jpg');
-    const cloudsTexture = textureLoader.load(texturePath + '8k_earth_clouds.jpg');
-    const normalMap = textureLoader.load(texturePath + '8k_earth_normal_map.jpg');
-    const specularMap = textureLoader.load(texturePath + '8k_earth_specular_map.jpg');
+    // 텍스처 캐싱 설정
+    textureLoader.crossOrigin = 'anonymous';
     
-    // 지구본 지오메트리 생성
-    const earthGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+    // 텍스처 로딩 우선순위 설정
+    const textures = {
+        day: null,
+        night: null,
+        clouds: null,
+        normal: null,
+        specular: null
+    };
     
-    // 지구본 머티리얼 생성 (낮/밤 텍스처 블렌딩)
-    const earthMaterial = new THREE.MeshPhongMaterial({
-        map: dayTexture,
-        normalMap: normalMap,
-        specularMap: specularMap,
-        shininess: 25,
-        transparent: true,
-        opacity: 0.9
-    });
+    // 텍스처 로딩 함수 (에러 핸들링 포함)
+    function loadTexture(url, fallbackColor = 0x444444) {
+        return new Promise((resolve) => {
+            textureLoader.load(
+                url,
+                (texture) => {
+                    console.log(`텍스처 로딩 성공: ${url}`);
+                    
+                    // 텍스처 최적화 설정
+                    texture.generateMipmaps = true;
+                    texture.minFilter = THREE.LinearMipmapLinearFilter;
+                    texture.magFilter = THREE.LinearFilter;
+                    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    texture.flipY = false; // WebGL 최적화
+                    texture.premultiplyAlpha = false;
+                    
+                    resolve(texture);
+                },
+                undefined,
+                (error) => {
+                    console.warn(`텍스처 로딩 실패: ${url}`, error);
+                    // 대체 텍스처 생성
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 512;
+                    canvas.height = 256;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = `#${fallbackColor.toString(16).padStart(6, '0')}`;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    const fallbackTexture = new THREE.CanvasTexture(canvas);
+                    
+                    // 대체 텍스처도 최적화 설정
+                    fallbackTexture.generateMipmaps = false;
+                    fallbackTexture.minFilter = THREE.LinearFilter;
+                    fallbackTexture.magFilter = THREE.LinearFilter;
+                    fallbackTexture.flipY = false;
+                    
+                    resolve(fallbackTexture);
+                }
+            );
+        });
+    }
     
-    // 지구본 메시 생성
-    earthGlobe = new THREE.Mesh(earthGeometry, earthMaterial);
+    // 텍스처들을 순차적으로 로드
+    async function loadAllTextures() {
+        try {
+            // 가장 중요한 텍스처부터 로드
+            textures.day = await loadTexture(texturePath + '8k_earth_daymap.jpg', 0x4a90e2);
+            textures.normal = await loadTexture(texturePath + '8k_earth_normal_map.jpg', 0x888888);
+            textures.specular = await loadTexture(texturePath + '8k_earth_specular_map.jpg', 0x222222);
+            textures.clouds = await loadTexture(texturePath + '8k_earth_clouds.jpg', 0xffffff);
+            textures.night = await loadTexture(texturePath + '8k_earth_nightmap.jpg', 0x1a1a2e);
+            
+            createEarthGlobe();
+            
+        } catch (error) {
+            console.error('텍스처 로딩 중 오류 발생:', error);
+            // 기본 지구본 생성
+            createBasicEarthGlobe();
+        }
+    }
     
-    // 지구본 크기와 위치 설정
-    earthGlobe.scale.set(0.8, 0.8, 0.8);
-    earthGlobe.position.set(0, 0, 0);
+    // 지구본 생성 함수
+    function createEarthGlobe() {
+        // 지구본 지오메트리 생성
+        const earthGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+        
+        // 지구본 머티리얼 생성 (낮/밤 텍스처 블렌딩)
+        const earthMaterial = new THREE.MeshPhongMaterial({
+            map: textures.day,
+            normalMap: textures.normal,
+            specularMap: textures.specular,
+            shininess: 25,
+            transparent: true,
+            opacity: 0.9
+        });
+        
+        // 지구본 메시 생성
+        earthGlobe = new THREE.Mesh(earthGeometry, earthMaterial);
+        
+        // 지구본 크기와 위치 설정
+        earthGlobe.scale.set(0.8, 0.8, 0.8);
+        earthGlobe.position.set(0, 0, 0);
+        
+        // 그림자 설정
+        earthGlobe.castShadow = true;
+        earthGlobe.receiveShadow = true;
+        
+        // 씬에 추가
+        scene.add(earthGlobe);
+        
+        // 구름 레이어 생성
+        if (textures.clouds) {
+            const cloudsGeometry = new THREE.SphereGeometry(1.52, 64, 64);
+            const cloudsMaterial = new THREE.MeshPhongMaterial({
+                map: textures.clouds,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
+            clouds.scale.set(0.8, 0.8, 0.8);
+            clouds.position.set(0, 0, 0);
+            scene.add(clouds);
+            
+            // 구름도 회전하도록 저장
+            earthClouds = clouds;
+        }
+        
+        console.log('텍스처 지구본 생성 완료!');
+    }
     
-    // 그림자 설정
-    earthGlobe.castShadow = true;
-    earthGlobe.receiveShadow = true;
+    // 기본 지구본 생성 함수 (텍스처 로딩 실패 시)
+    function createBasicEarthGlobe() {
+        const earthGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+        const earthMaterial = new THREE.MeshPhongMaterial({
+            color: 0x4a90e2,
+            shininess: 25,
+            transparent: true,
+            opacity: 0.9
+        });
+        
+        earthGlobe = new THREE.Mesh(earthGeometry, earthMaterial);
+        earthGlobe.scale.set(0.8, 0.8, 0.8);
+        earthGlobe.position.set(0, 0, 0);
+        earthGlobe.castShadow = true;
+        earthGlobe.receiveShadow = true;
+        scene.add(earthGlobe);
+        
+        console.log('기본 지구본 생성 완료!');
+    }
     
-    // 씬에 추가
-    scene.add(earthGlobe);
-    
-    // 구름 레이어 생성
-    const cloudsGeometry = new THREE.SphereGeometry(1.52, 64, 64);
-    const cloudsMaterial = new THREE.MeshPhongMaterial({
-        map: cloudsTexture,
-        transparent: true,
-        opacity: 0.3,
-        blending: THREE.AdditiveBlending
-    });
-    
-    const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
-    clouds.scale.set(0.8, 0.8, 0.8);
-    clouds.position.set(0, 0, 0);
-    scene.add(clouds);
-    
-    // 구름도 회전하도록 저장
-    earthClouds = clouds;
-    
-    console.log('텍스처 지구본 생성 완료!');
+    // 텍스처 로딩 시작
+    loadAllTextures();
 }
 
 // 애니메이션 루프
 function animate() {
     requestAnimationFrame(animate);
+    
+    // 로딩이 완료되지 않았으면 정적 렌더링만 수행
+    if (!earthGlobe) {
+        renderer.render(scene, camera);
+        return;
+    }
     
     // 지구본 회전 (Y축만 회전, 위치는 고정)
     if (earthGlobe) {
@@ -308,12 +498,12 @@ function animate() {
     
     // 구름 레이어도 회전 (지구본보다 조금 빠르게)
     if (earthClouds) {
-        earthClouds.rotation.y += rotationSpeed * 1.2;
+        earthClouds.rotation.y += rotationSpeed * 1.1; // 구름 속도도 감소 (1.2 → 1.1)
         earthClouds.position.set(0, 0, 0);
     }
     
-    // 텍스트와 팀 스프라이트 공전 애니메이션
-    textAngle += 0.006;
+    // 텍스트와 팀 스프라이트 공전 애니메이션 (속도 대폭 감소)
+    textAngle += 0.002; // 텍스트 공전 속도 대폭 감소 (0.006 → 0.002)
     
     // 글자 공전
     const letters = "In-House Magazine".split("");
@@ -330,14 +520,14 @@ function animate() {
         sprite.lookAt(camera.position);
         sprite.rotation.z = Math.sin(letterAngle) * 0.1;
         
-        // 텍스트 반짝임 효과
-        const time = Date.now() * 0.001;
+        // 텍스트 반짝임 효과 (속도 감소)
+        const time = Date.now() * 0.0005; // 반짝임 속도 감소 (0.001 → 0.0005)
         sprite.material.opacity = 0.7 + Math.sin(time * 2 + index * 0.5) * 0.3;
     });
 
-    // 팀 공전 (더 큰 궤도)
+    // 팀 공전 (더 큰 궤도, 속도 대폭 감소)
     teamSprites.forEach((sprite, index) => {
-        const teamAngle = textAngle * 0.7 + index * ((Math.PI * 2) / teams.length);
+        const teamAngle = textAngle * 0.5 + index * ((Math.PI * 2) / teams.length); // 팀 공전 속도 감소 (0.7 → 0.5)
 
         const teamRadius = orbitRadius * 1.2; // 팀 궤도 반지름 감소 (1.5 → 1.2)
         const x = Math.cos(teamAngle) * teamRadius;
@@ -348,17 +538,17 @@ function animate() {
         sprite.lookAt(camera.position);
         sprite.rotation.z = Math.sin(teamAngle) * 0.05;
         
-        // 팀 스프라이트 반짝임 효과
-        const time = Date.now() * 0.001;
+        // 팀 스프라이트 반짝임 효과 (속도 감소)
+        const time = Date.now() * 0.0003; // 반짝임 속도 감소 (0.0015 → 0.0003)
         sprite.material.opacity = 0.6 + Math.sin(time * 1.5 + index * 0.3) * 0.4;
     });
     
-    // 별들 반짝임 효과
-    const time = Date.now() * 0.001;
+    // 별들 반짝임 효과 (속도 감소)
+    const time = Date.now() * 0.0003; // 별 반짝임 속도 감소 (0.001 → 0.0003)
     scene.children.forEach(child => {
         if (child.type === 'Points' && child.material.color.getHex() === 0x333355) {
             // 먼지 입자들은 천천히 회전
-            child.rotation.y += 0.0005;
+            child.rotation.y += 0.0002; // 먼지 회전 속도 감소 (0.0005 → 0.0002)
         } else if (child.type === 'Points' && child.material.vertexColors) {
             // 일반 별들 반짝임
             child.material.opacity = 0.7 + Math.sin(time * 1.5) * 0.2;
@@ -646,5 +836,21 @@ function closeTeamCard() {
 // 전역 함수로 등록
 window.closeTeamCard = closeTeamCard;
 
-// 애플리케이션 시작
-init();
+// 페이지 로드 완료 후 초기화 시작
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM 로딩 완료, Three.js 라이브러리 로딩 대기 중...');
+    
+    // Three.js 라이브러리 로딩 확인 후 초기화
+    function checkAndInit() {
+        if (typeof THREE !== 'undefined' && THREE.LoadingManager) {
+            console.log('Three.js 라이브러리 로딩 완료, 애플리케이션 초기화 시작');
+            init();
+        } else {
+            console.log('Three.js 라이브러리 로딩 대기 중...');
+            setTimeout(checkAndInit, 100);
+        }
+    }
+    
+    // 초기 확인 시작
+    checkAndInit();
+});
