@@ -247,10 +247,10 @@ function createSpaceEnvironment() {
     setTimeout(() => {
         gsap.to(starsMaterial, {
             opacity: 0.9,
-            duration: 4,
+            duration: 6,
             ease: "power2.out"
         });
-    }, 500); // 0.5초 후 시작
+    }, 1000); // 1초 후 시작
     
     // 큰 밝은 별들 제거 - 더 자연스러운 우주 환경
     
@@ -269,10 +269,10 @@ function createSpaceEnvironment() {
     setTimeout(() => {
         gsap.to(nebulaMaterial, {
             opacity: 0.05,
-            duration: 5,
+            duration: 7,
             ease: "power2.out"
         });
-    }, 800); // 0.8초 후 시작
+    }, 1500); // 1.5초 후 시작
     
     // 먼지 입자들 - 더 은은하게
     const dustGeometry = new THREE.BufferGeometry();
@@ -303,10 +303,10 @@ function createSpaceEnvironment() {
     setTimeout(() => {
         gsap.to(dustMaterial, {
             opacity: 0.2,
-            duration: 4.5,
+            duration: 6.5,
             ease: "power2.out"
         });
-    }, 1200); // 1.2초 후 시작
+    }, 2000); // 2초 후 시작
 }
 
 // 지구본 생성 함수 (텍스처 사용)
@@ -436,10 +436,10 @@ function loadEarthGlobe() {
         setTimeout(() => {
             gsap.to(earthMaterial, {
                 opacity: 0.9,
-                duration: 5,
+                duration: 8,
                 ease: "power2.out"
             });
-        }, 1000); // 1초 후 시작
+        }, 2500); // 2.5초 후 시작
         
         // 구름 레이어 생성
         if (textures.clouds) {
@@ -463,10 +463,10 @@ function loadEarthGlobe() {
             setTimeout(() => {
                 gsap.to(cloudsMaterial, {
                     opacity: 0.3,
-                    duration: 6,
+                    duration: 9,
                     ease: "power2.out"
                 });
-            }, 2000); // 2초 후 시작
+            }, 3500); // 3.5초 후 시작
         }
         
         console.log('텍스처 지구본 생성 완료!');
@@ -496,10 +496,10 @@ function loadEarthGlobe() {
         setTimeout(() => {
             gsap.to(earthMaterial, {
                 opacity: 0.9,
-                duration: 5,
+                duration: 8,
                 ease: "power2.out"
             });
-        }, 1000); // 1초 후 시작
+        }, 2500); // 2.5초 후 시작
         
         console.log('기본 지구본 생성 완료!');
         
@@ -580,7 +580,7 @@ function animate() {
         sprite.rotation.z = Math.sin(letterAngle) * 0.1;
         
         // 페이드인 애니메이션이 완료된 후에만 반짝임 효과 적용
-        const fadeInCompleteTime = 2000 + sprite.userData.fadeInDelay * 1000 + 3000; // 페이드인 완료 시간
+        const fadeInCompleteTime = 4000 + sprite.userData.fadeInDelay * 1000 + 5000; // 페이드인 완료 시간
         if (Date.now() > fadeInCompleteTime) {
             const time = Date.now() * 0.0005; // 반짝임 속도 감소 (0.001 → 0.0005)
             const baseOpacity = 1; // 기본 투명도를 1로 설정
@@ -602,7 +602,7 @@ function animate() {
         sprite.rotation.z = Math.sin(teamAngle) * 0.05;
         
         // 페이드인 애니메이션이 완료된 후에만 반짝임 효과 적용
-        const fadeInCompleteTime = 3500 + sprite.userData.fadeInDelay * 1000 + 4000; // 페이드인 완료 시간
+        const fadeInCompleteTime = 6000 + sprite.userData.fadeInDelay * 1000 + 4000; // 페이드인 완료 시간
         if (Date.now() > fadeInCompleteTime) {
             const time = Date.now() * 0.001; // 반짝임 속도 증가 (0.0003 → 0.001)
             const baseOpacity = 0.8; // 기본 투명도를 0.8로 설정
@@ -612,7 +612,7 @@ function animate() {
     
     // 별들 반짝임 효과 (속도 감소) - 성능에 따라 조정
     const time = Date.now() * 0.0003; // 별 반짝임 속도 감소 (0.001 → 0.0003)
-    const starsFadeInCompleteTime = 500 + 4000; // 별들 페이드인 완료 시간 (0.5초 + 4초)
+    const starsFadeInCompleteTime = 1000 + 6000; // 별들 페이드인 완료 시간 (1초 + 6초)
     
     // 성능에 따라 별 반짝임 빈도 조정
     if (!isLowEndDevice || frameCount % 2 === 0) {
@@ -718,10 +718,10 @@ function createTextSprites() {
         setTimeout(() => {
             gsap.to(letterSprite.material, {
                 opacity: 1,
-                duration: 3,
+                duration: 5,
                 ease: "power2.out"
             });
-        }, 2000 + letterSprite.userData.fadeInDelay * 1000); // 2초 후부터 시작
+        }, 4000 + letterSprite.userData.fadeInDelay * 1000); // 4초 후부터 시작
     });
 }
 
@@ -788,10 +788,10 @@ function createTeamSprites() {
         setTimeout(() => {
             gsap.to(teamSprite.material, {
                 opacity: 0.8,
-                duration: 4,
+                duration: 6,
                 ease: "power2.out"
             });
-        }, 3500 + teamSprite.userData.fadeInDelay * 1000); // 3.5초 후부터 시작
+        }, 6000 + teamSprite.userData.fadeInDelay * 1000); // 6초 후부터 시작
         
         // 디버깅: 팀 스프라이트 생성 확인
         console.log(`팀 스프라이트 생성: ${team} (인덱스: ${index})`);
