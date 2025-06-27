@@ -20,7 +20,9 @@ let currentTeamIndex = 0;
 let loadingManager;
 let totalAssets = 5; // 텍스처 개수
 let loadedAssets = 0;
-let isFullyLoaded = false; // 완전 로딩 상태 추적
+
+// Glow Sphere 전역 변수 추가
+let earthGlow = null;
 
 // 팀 정보 설정
 const teams = [
@@ -29,14 +31,14 @@ const teams = [
 ];
 
 const teamColors = [
-    "#2B3A67", // 경영관리실 - 클래식 네이비
-    "#1E2A45", // 전략기획실 - 미드나잇 블루
-    "#B3D5F2", // 압타밀 팀 - 밀크 블루
-    "#FFA450", // 드리미 팀 - 에너지 오렌지
-    "#7FC7FF", // 컨텐츠 팀 - 아이스 블루
-    "#50E3C2", // 고객지원부 - 시안 블루
-    "#6E7A87", // 물류센터 - 딥 시멘트 그레이
-    "#C96BE2"  // 마케팅팀 - 퓨시아 퍼플
+    "#2B3A67", // 경영관리실
+    "#5A6D8F", // 전략기획실 (블루퍼플 틸)
+    "#B3D5F2", // 압타밀 팀
+    "#FFA450", // 드리미 팀
+    "#7FC7FF", // 컨텐츠 팀
+    "#50E3C2", // 고객지원부
+    "#6E7A87", // 물류센터
+    "#C96BE2"  // 마케팅팀
 ];
 
 const teamDescriptions = [
@@ -49,57 +51,6 @@ const teamDescriptions = [
     "제품 보관 및 배송을 총괄하는 물류 센터입니다. 외부 물류 파트너사와 협업하여 재고 관리, 빠른 출고, 정확한 배송을 통해 고객 신뢰를 구축합니다.",
     "브랜드 인지도 향상과 매출 성장을 위한 통합 마케팅을 기획합니다. 리뷰 기반 디지털 마케팅, 타겟 광고, 프로모션 전략을 통해 플랫폼 내 경쟁력을 확보합니다."
 ];
-
-// 로딩 진행률 업데이트 함수
-function updateProgress(loaded, total) {
-    // Three.js 라이브러리 로딩을 고려한 전체 진행률 계산
-    const libraryLoadingWeight = 0.3; // 라이브러리 로딩 비중
-    const textureLoadingWeight = 0.7; // 텍스처 로딩 비중
-    
-    const textureProgress = (loaded / total) * textureLoadingWeight;
-    const totalProgress = (libraryLoadingWeight + textureProgress) * 100;
-    
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    
-    if (progressBar && progressText) {
-        progressBar.style.width = Math.min(totalProgress, 100) + '%';
-        progressText.textContent = Math.round(Math.min(totalProgress, 100)) + '%';
-    }
-}
-
-// 로딩 완료 처리 함수
-function onLoadingComplete() {
-    console.log('모든 텍스처 로딩 완료!');
-    
-    // 진행률을 100%로 설정
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    if (progressBar && progressText) {
-        progressBar.style.width = '100%';
-        progressText.textContent = '100%';
-    }
-    
-    // 추가 지연 시간 (3초) 후 로딩 화면 숨기기
-    setTimeout(() => {
-        console.log('추가 지연 시간 완료, 로딩 화면 숨김');
-        
-        // 로딩 화면 숨기기
-        const loadingScreen = document.getElementById('loadingScreen');
-        if (loadingScreen) {
-            loadingScreen.classList.add('hidden');
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-                isFullyLoaded = true; // 완전 로딩 상태로 설정
-                console.log('로딩 화면 완전히 숨김, 애니메이션 시작');
-            }, 500);
-        }
-        
-        // 애니메이션 루프 시작
-        animate();
-        
-    }, 3000); // 3초 추가 지연
-}
 
 // 초기화 함수
 function init() {
@@ -115,22 +66,14 @@ function init() {
     // 로딩 매니저 설정
     loadingManager = new THREE.LoadingManager();
     
-    loadingManager.onProgress = function(url, loaded, total) {
-        loadedAssets = loaded;
-        updateProgress(loaded, total);
-        console.log(`로딩 진행률: ${loaded}/${total} - ${url}`);
-    };
-    
     loadingManager.onLoad = function() {
         console.log('모든 에셋 로딩 완료!');
-        onLoadingComplete();
+        // 애니메이션 루프 시작
+        animate();
     };
     
     loadingManager.onError = function(url) {
         console.error('로딩 에러:', url);
-        // 에러 발생 시에도 진행률 업데이트
-        loadedAssets++;
-        updateProgress(loadedAssets, totalAssets);
     };
 
     // 씬 생성
@@ -462,6 +405,9 @@ function loadEarthGlobe() {
         }
         
         console.log('텍스처 지구본 생성 완료!');
+        
+        // Glow Sphere 생성
+        createEarthGlow();
     }
     
     // 기본 지구본 생성 함수 (텍스처 로딩 실패 시)
@@ -482,10 +428,31 @@ function loadEarthGlobe() {
         scene.add(earthGlobe);
         
         console.log('기본 지구본 생성 완료!');
+        
+        // Glow Sphere 생성
+        createEarthGlow();
     }
     
     // 텍스처 로딩 시작
     loadAllTextures();
+}
+
+// Glow Sphere 생성 함수
+function createEarthGlow() {
+    // earthGlobe의 실제 반지름과 scale을 반영
+    const globeRadius = 1.5 * 0.8; // 지구본 geometry 반지름 * scale
+    const glowRadius = globeRadius * 1.08; // 지구본보다 약간 크게
+    const glowGeometry = new THREE.SphereGeometry(glowRadius, 64, 64);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    earthGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+    earthGlow.position.set(0, 0, 0);
+    scene.add(earthGlow);
 }
 
 // 애니메이션 루프
@@ -563,6 +530,10 @@ function animate() {
             child.material.opacity = 0.7 + Math.sin(time * 1.5) * 0.2;
         }
     });
+    
+    if (earthGlow) {
+        earthGlow.rotation.y = earthGlobe ? earthGlobe.rotation.y : 0;
+    }
     
     renderer.render(scene, camera);
 }
@@ -784,66 +755,19 @@ function onMouseMove(event) {
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(teamSprites);
+    let intersects = raycaster.intersectObjects(teamSprites);
+    // 지구본 앞쪽(카메라에서 보이는 쪽)만 필터링
+    intersects = intersects.filter(intersect => {
+        const spritePos = intersect.object.position.clone().normalize();
+        const cameraDir = camera.position.clone().normalize();
+        return spritePos.dot(cameraDir) > 0;
+    });
 
+    // 호버 효과 없이 커서만 변경
     if (intersects.length > 0) {
-        if (!isHovering) {
-            isHovering = true;
-            hoveredSprite = intersects[0].object;
-            console.log("팀 호버 시작:", hoveredSprite.userData.teamName);
             document.body.style.cursor = "pointer";
-
-            // 호버 시 더 크게 확대
-            gsap.to(hoveredSprite.scale, {
-                x: 2.2, y: 0.8, z: 2.2, // 호버 시 크기 대폭 증가
-                duration: 0.4,
-                ease: "power2.out",
-            });
-            
-            // 호버 시 밝기 증가
-            gsap.to(hoveredSprite.material, {
-                opacity: 1.0,
-                duration: 0.4,
-                ease: "power2.out",
-            });
-            
-            // 호버 시 색상을 밝게 변경
-            if (!hoveredSprite.userData.isHovered) {
-                const brightColor = brightenColor(hoveredSprite.userData.originalColor, 1.8);
-                updateSpriteColor(hoveredSprite, brightColor);
-                hoveredSprite.userData.isHovered = true;
-            }
-        }
     } else {
-        if (isHovering) {
-            isHovering = false;
-            console.log("팀 호버 종료:", hoveredSprite.userData.teamName);
             document.body.style.cursor = "default";
-
-            if (hoveredSprite) {
-                // 원래 크기로 복원
-                gsap.to(hoveredSprite.scale, {
-                    x: 2.0, y: 0.8, z: 2.0, // 새로운 기본 크기로 수정
-                    duration: 0.4,
-                    ease: "power2.out",
-                });
-                
-                // 원래 투명도로 복원
-                gsap.to(hoveredSprite.material, {
-                    opacity: 0.8,
-                    duration: 0.4,
-                    ease: "power2.out",
-                });
-                
-                // 원래 색상으로 복원
-                if (hoveredSprite.userData.isHovered) {
-                    updateSpriteColor(hoveredSprite, hoveredSprite.userData.originalColor);
-                    hoveredSprite.userData.isHovered = false;
-                }
-                
-                hoveredSprite = null;
-            }
-        }
     }
 }
 
@@ -851,12 +775,17 @@ function onMouseMove(event) {
 function onMouseClick(event) {
     console.log("마우스 클릭 감지");
     
-    // 클릭 시점에 다시 레이캐스트 수행
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(teamSprites);
+    let intersects = raycaster.intersectObjects(teamSprites);
+    // 지구본 앞쪽(카메라에서 보이는 쪽)만 필터링
+    intersects = intersects.filter(intersect => {
+        const spritePos = intersect.object.position.clone().normalize();
+        const cameraDir = camera.position.clone().normalize();
+        return spritePos.dot(cameraDir) > 0;
+    });
     
     if (intersects.length > 0) {
         const clickedSprite = intersects[0].object;
@@ -885,7 +814,13 @@ function onTouchStart(event) {
         mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
         
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(teamSprites);
+        let intersects = raycaster.intersectObjects(teamSprites);
+        // 지구본 앞쪽(카메라에서 보이는 쪽)만 필터링
+        intersects = intersects.filter(intersect => {
+            const spritePos = intersect.object.position.clone().normalize();
+            const cameraDir = camera.position.clone().normalize();
+            return spritePos.dot(cameraDir) > 0;
+        });
         
         if (intersects.length > 0) {
             isHovering = true;
@@ -926,7 +861,13 @@ function onTouchMove(event) {
         mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
         
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(teamSprites);
+        let intersects = raycaster.intersectObjects(teamSprites);
+        // 지구본 앞쪽(카메라에서 보이는 쪽)만 필터링
+        intersects = intersects.filter(intersect => {
+            const spritePos = intersect.object.position.clone().normalize();
+            const cameraDir = camera.position.clone().normalize();
+            return spritePos.dot(cameraDir) > 0;
+        });
         
         if (intersects.length > 0) {
             if (!isHovering) {
@@ -1024,6 +965,23 @@ function showTeamCard(teamName, description) {
         clickGuide.style.opacity = "0";
         clickGuide.style.transform = "translate(-50%, -50%) scale(0.8)";
     }
+    // 오버레이 표시 및 pointerEvents 활성화
+    const blocker = document.getElementById("blocker");
+    if (blocker) {
+        blocker.style.display = "block";
+        blocker.style.pointerEvents = "auto";
+    }
+
+    // Glow 애니메이션
+    if (earthGlow && currentTeamIndex !== -1) {
+        const color = new THREE.Color(teamColors[currentTeamIndex]);
+        earthGlow.material.color.copy(color);
+        gsap.to(earthGlow.material, {
+            opacity: 0.45,
+            duration: 0.7,
+            ease: "power2.out"
+        });
+    }
 }
 
 // 팀 변경 함수
@@ -1058,6 +1016,17 @@ function changeTeam(direction) {
     setTimeout(() => {
         teamCard.style.transform = "translate(-50%, -50%) scale(1)";
     }, 150);
+
+    // Glow 애니메이션 (팀 변경 시)
+    if (earthGlow && currentTeamIndex !== -1) {
+        const color = new THREE.Color(teamColors[currentTeamIndex]);
+        earthGlow.material.color.copy(color);
+        gsap.to(earthGlow.material, {
+            opacity: 0.45,
+            duration: 0.7,
+            ease: "power2.out"
+        });
+    }
 }
 
 // 팀 카드 닫기 함수
@@ -1070,13 +1039,60 @@ function closeTeamCard() {
         clickGuide.style.opacity = "0.7";
         clickGuide.style.transform = "translate(-50%, -50%) scale(1)";
     }
-    
-    // 카메라 이동 기능 제거 - 카메라가 고정된 상태로 유지
+    // 오버레이 숨김 및 pointerEvents 비활성화
+    const blocker = document.getElementById("blocker");
+    if (blocker) {
+        blocker.style.display = "none";
+        blocker.style.pointerEvents = "none";
+    }
+
+    // Glow 사라지게
+    if (earthGlow) {
+        gsap.to(earthGlow.material, {
+            opacity: 0.0,
+            duration: 0.7,
+            ease: "power2.in"
+        });
+    }
 }
 
 // 전역 함수로 등록
 window.closeTeamCard = closeTeamCard;
 window.changeTeam = changeTeam;
+
+// 모바일 환경 감지 및 안내 표시
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function isSmallScreen() {
+    return window.innerWidth <= 900;
+}
+
+function showMobileBlock() {
+    var mobileBlock = document.getElementById("mobileBlock");
+    if (mobileBlock) mobileBlock.style.display = "flex";
+}
+function hideMobileBlock() {
+    var mobileBlock = document.getElementById("mobileBlock");
+    if (mobileBlock) mobileBlock.style.display = "none";
+}
+
+function checkBlocker() {
+    if (isMobileDevice() || isSmallScreen()) {
+        showMobileBlock();
+    } else {
+        hideMobileBlock();
+    }
+}
+
+window.addEventListener('resize', checkBlocker);
+document.addEventListener('DOMContentLoaded', function() {
+    checkBlocker();
+    if (!(isMobileDevice() || isSmallScreen())) {
+        window.onload = checkAndInit;
+    }
+});
 
 // 페이지 로드 완료 후 초기화 시작
 document.addEventListener('DOMContentLoaded', function() {

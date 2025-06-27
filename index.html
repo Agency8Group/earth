@@ -55,117 +55,14 @@
                 z-index: 100;
             }
 
-            /* 로딩 화면 스타일 */
-            #loadingScreen {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(135deg, #000428 0%, #004e92 100%);
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-                transition: opacity 0.5s ease;
-            }
-
-            #loadingScreen.hidden {
-                opacity: 0;
-                pointer-events: none;
-            }
-
-            .loading-content {
-                text-align: center;
-                color: white;
-            }
-
-            .loading-title {
-                font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-                    "Helvetica Neue", Arial, sans-serif;
-                font-size: 2.5rem;
-                font-weight: 900;
-                margin-bottom: 2rem;
-                background: linear-gradient(45deg, #ffd700, #ffa500, #ffd700);
-                background-size: 200% 200%;
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                animation: gradientShift 2s ease-in-out infinite;
-            }
-
-            @keyframes gradientShift {
-                0%,
-                100% {
-                    background-position: 0% 50%;
-                }
-                50% {
-                    background-position: 100% 50%;
-                }
-            }
-
-            .loading-subtitle {
-                font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-                    "Helvetica Neue", Arial, sans-serif;
-                font-size: 1.2rem;
-                margin-bottom: 3rem;
-                opacity: 0.8;
-            }
-
-            .progress-container {
-                width: 300px;
-                height: 6px;
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 3px;
-                overflow: hidden;
-                margin-bottom: 1rem;
-                margin-left: auto;
-                margin-right: auto;
-                display: block;
-            }
-
-            .progress-bar {
-                height: 100%;
-                background: linear-gradient(90deg, #ffd700, #ffa500);
-                width: 0%;
-                transition: width 0.3s ease;
-                border-radius: 3px;
-            }
-
-            .progress-text {
-                font-family: "Segoe UI", -apple-system, BlinkMacSystemFont,
-                    "Helvetica Neue", Arial, sans-serif;
-                font-size: 1rem;
-                opacity: 0.7;
-            }
-
-            .loading-spinner {
-                width: 40px;
-                height: 40px;
-                border: 3px solid rgba(255, 215, 0, 0.3);
-                border-top: 3px solid #ffd700;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin-bottom: 2rem;
-            }
-
-            @keyframes spin {
-                0% {
-                    transform: rotate(0deg);
-                }
-                100% {
-                    transform: rotate(360deg);
-                }
-            }
-
             /* 팀 카드 UI 스타일 */
             #teamCard {
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.9);
-                border: 2px solid #ffd700;
+                background: rgba(0, 0, 0, 0.05);
+                border: none;
                 border-radius: 15px;
                 padding: 60px;
                 color: white;
@@ -175,7 +72,7 @@
                 opacity: 0;
                 visibility: hidden;
                 transition: all 0.3s ease;
-                backdrop-filter: blur(10px);
+                backdrop-filter: blur(3px);
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -203,7 +100,7 @@
 
             .navBtn {
                 background: transparent;
-                color: #ffd700;
+                color: white;
                 border: none;
                 width: 60px;
                 height: 60px;
@@ -219,7 +116,7 @@
             }
 
             .navBtn:hover {
-                color: #ffa500;
+                color: rgba(255, 255, 255, 0.7);
                 transform: scale(1.1);
             }
 
@@ -338,8 +235,8 @@
             }
 
             .closeBtn {
-                background: #ffd700;
-                color: #000;
+                background: transparent;
+                color: white;
                 border: none;
                 padding: 16px 35px;
                 border-radius: 10px;
@@ -351,7 +248,7 @@
                 margin: 0;
                 min-width: 100px;
                 min-height: 55px;
-                box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+                box-shadow: none;
                 position: relative;
                 z-index: 1001;
                 /* 미러링 환경을 위한 터치 친화적 크기 */
@@ -359,9 +256,9 @@
             }
 
             .closeBtn:hover {
-                background: #ffa500;
+                background: rgba(255, 255, 255, 0.1);
                 transform: scale(1.05);
-                box-shadow: 0 4px 12px rgba(255, 215, 0, 0.5);
+                box-shadow: none;
             }
 
             /* 닫기 버튼 클릭 영역 확장 (미러링 환경 고려) */
@@ -417,21 +314,6 @@
         </style>
     </head>
     <body>
-        <!-- 로딩 화면 -->
-        <div id="loadingScreen">
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <h1 class="loading-title">In-House Magazine</h1>
-                <p class="loading-subtitle">
-                    장면이 살아나는 중입니다 조금만 기다려주세요...
-                </p>
-                <div class="progress-container">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                <p class="progress-text" id="progressText">0%</p>
-            </div>
-        </div>
-
         <div id="container"></div>
 
         <!-- 클릭 안내 메시지 -->
@@ -440,8 +322,69 @@
             <div class="guide-subtext">Click Team</div>
         </div>
 
+        <!-- 팀 카드가 열릴 때 클릭 차단용 오버레이(4분할) -->
+        <div
+            id="blocker-top"
+            style="
+                display: none;
+                position: fixed;
+                z-index: 9998;
+                left: 0;
+                top: 0;
+                width: 100vw;
+                height: 0;
+                background: transparent;
+                pointer-events: auto;
+            "
+        ></div>
+        <div
+            id="blocker-bottom"
+            style="
+                display: none;
+                position: fixed;
+                z-index: 9998;
+                left: 0;
+                bottom: 0;
+                width: 100vw;
+                height: 0;
+                background: transparent;
+                pointer-events: auto;
+            "
+        ></div>
+        <div
+            id="blocker-left"
+            style="
+                display: none;
+                position: fixed;
+                z-index: 9998;
+                left: 0;
+                top: 0;
+                width: 0;
+                height: 100vh;
+                background: transparent;
+                pointer-events: auto;
+            "
+        ></div>
+        <div
+            id="blocker-right"
+            style="
+                display: none;
+                position: fixed;
+                z-index: 9998;
+                right: 0;
+                top: 0;
+                width: 0;
+                height: 100vh;
+                background: transparent;
+                pointer-events: auto;
+            "
+        ></div>
+
         <!-- 팀 카드 UI -->
-        <div id="teamCard">
+        <div
+            id="teamCard"
+            style="position: fixed; z-index: 9999; pointer-events: auto"
+        >
             <div class="team-content">
                 <h2 id="teamTitle">팀명</h2>
                 <p id="teamDescription">팀 소개 내용이 여기에 표시됩니다.</p>
@@ -457,6 +400,31 @@
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- 모바일 환경 차단 오버레이 -->
+        <div
+            id="mobileBlock"
+            style="
+                display: none;
+                position: fixed;
+                z-index: 10000;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.95);
+                color: white;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                text-align: center;
+            "
+        >
+            모바일 환경에서는 지원하지 않습니다.<br />
+            PC에서 접속해 주세요.
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
