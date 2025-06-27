@@ -6,12 +6,15 @@ let rotationSpeed = 0.002;
 let letterSprites = [];
 let teamSprites = [];
 let textAngle = 0;
-const orbitRadius = 2.8;
+const orbitRadius = 1.8;
 
 // 마우스 인터랙션 관련 변수
 let raycaster, mouse;
 let isHovering = false;
 let hoveredSprite = null;
+
+// 팀 카드 관련 변수
+let currentTeamIndex = 0;
 
 // 로딩 관리 변수
 let loadingManager;
@@ -26,8 +29,14 @@ const teams = [
 ];
 
 const teamColors = [
-    "#E34F26", "#1572B6", "#F7DF1E", "#06B6D4",
-    "#3776AB", "#4285F4", "#00FF88", "#FF6B6B"
+    "#2B3A67", // 경영관리실 - 클래식 네이비
+    "#1E2A45", // 전략기획실 - 미드나잇 블루
+    "#B3D5F2", // 압타밀 팀 - 밀크 블루
+    "#FFA450", // 드리미 팀 - 에너지 오렌지
+    "#7FC7FF", // 컨텐츠 팀 - 아이스 블루
+    "#50E3C2", // 고객지원부 - 시안 블루
+    "#6E7A87", // 물류센터 - 딥 시멘트 그레이
+    "#C96BE2"  // 마케팅팀 - 퓨시아 퍼플
 ];
 
 const teamDescriptions = [
@@ -530,8 +539,8 @@ function animate() {
         const teamAngle = textAngle * 0.5 + index * ((Math.PI * 2) / teams.length); // 팀 공전 속도 감소 (0.7 → 0.5)
 
         const teamRadius = orbitRadius * 1.2; // 팀 궤도 반지름 감소 (1.5 → 1.2)
-        const x = Math.cos(teamAngle) * teamRadius;
-        const y = Math.sin(teamAngle * 0.3) * teamRadius * 0.2;
+        const x = Math.cos(teamAngle) * teamRadius + 0.3; // 텍스트 오른쪽으로 더 이동 (0.0 → +0.3)
+        const y = Math.sin(teamAngle * 0.3) * teamRadius * 0.2 - 0.5; // 아래로 30px 이동
         const z = Math.sin(teamAngle) * teamRadius;
 
         sprite.position.set(x, y, z);
@@ -585,7 +594,7 @@ function createTextSprites() {
             gradient.addColorStop(1, "rgba(0, 0, 0, 0)"); // 투명
 
             context.fillStyle = gradient;
-            context.font = "900 60px Orbitron"; // 볼드 퓨처리스틱 폰트
+            context.font = "900 60px 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"; // Sans-serif 폰트로 변경
             context.textAlign = "center";
             context.fillText(text, 128, 160);
 
@@ -638,27 +647,27 @@ function createTeamSprites() {
         const createTeamSprite = (text) => {
             const canvas = document.createElement("canvas");
             const context = canvas.getContext("2d");
-            canvas.width = 300; // 캔버스 크기 증가
-            canvas.height = 80; // 캔버스 높이 증가
+            canvas.width = 400; // 아이콘 공간을 위해 캔버스 크기 증가
+            canvas.height = 80; // 캔버스 높이 유지
 
-            // 팀별 색상을 우주 느낌으로 변환
+            // 팀별 색상 적용
             const teamColor = teamColors[index];
             const rgb = hexToRgb(teamColor);
             
-            // 글로우 효과 추가
+            // 텍스트 그리기 - 팀별 색상으로 변경
             context.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`;
             context.shadowBlur = 12; // 글로우 효과 증가
             
-            // 메인 텍스트
-            context.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.9)`;
-            context.font = "400 60px Rajdhani"; // 폰트 크기 증가, 굵기 증가
-            context.textAlign = "center";
-            context.fillText(text, 150, 50); // 위치 조정
+            // 메인 텍스트 - 팀별 색상으로 변경
+            context.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.95)`;
+            context.font = "400 30px 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"; // Sans-serif 폰트로 변경
+            context.textAlign = "left"; // 왼쪽 정렬로 변경
+            context.fillText(text, 70, 50); // 아이콘 오른쪽으로 위치 조정
             
-            // 추가 글로우 레이어
+            // 추가 글로우 레이어 - 팀별 색상으로
             context.shadowBlur = 6;
-            context.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
-            context.fillText(text, 150, 50);
+            context.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.7)`;
+            context.fillText(text, 70, 50);
 
             const texture = new THREE.CanvasTexture(canvas);
             texture.generateMipmaps = false;
@@ -684,6 +693,8 @@ function createTeamSprites() {
             teamIndex: index,
             teamName: team,
             description: teamDescriptions[index],
+            originalColor: teamColors[index], // 원본 색상 저장
+            isHovered: false // 호버 상태 추적
         };
         teamSprites.push(teamSprite);
         scene.add(teamSprite);
@@ -701,6 +712,55 @@ function hexToRgb(hex) {
         g: parseInt(result[2], 16),
         b: parseInt(result[3], 16)
     } : null;
+}
+
+// 호버 시 색상을 밝게 만드는 함수
+function brightenColor(hex, factor = 1.5) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    
+    const brightened = {
+        r: Math.min(255, Math.round(rgb.r * factor)),
+        g: Math.min(255, Math.round(rgb.g * factor)),
+        b: Math.min(255, Math.round(rgb.b * factor))
+    };
+    
+    return `#${brightened.r.toString(16).padStart(2, '0')}${brightened.g.toString(16).padStart(2, '0')}${brightened.b.toString(16).padStart(2, '0')}`;
+}
+
+// 스프라이트 색상 변경 함수
+function updateSpriteColor(sprite, color) {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.width = 400;
+    canvas.height = 80;
+
+    const rgb = hexToRgb(color);
+    
+    // 텍스트 그리기 - 새로운 색상으로
+    context.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`;
+    context.shadowBlur = 12;
+    
+    // 메인 텍스트
+    context.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.95)`;
+    context.font = "400 30px 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
+    context.textAlign = "left";
+    context.fillText(sprite.userData.teamName, 70, 50);
+    
+    // 추가 글로우 레이어
+    context.shadowBlur = 6;
+    context.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.7)`;
+    context.fillText(sprite.userData.teamName, 70, 50);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.format = THREE.RGBAFormat;
+    texture.premultiplyAlpha = false;
+
+    sprite.material.map = texture;
+    sprite.material.needsUpdate = true;
 }
 
 // 마우스 인터랙션 설정
@@ -746,6 +806,13 @@ function onMouseMove(event) {
                 duration: 0.4,
                 ease: "power2.out",
             });
+            
+            // 호버 시 색상을 밝게 변경
+            if (!hoveredSprite.userData.isHovered) {
+                const brightColor = brightenColor(hoveredSprite.userData.originalColor, 1.8);
+                updateSpriteColor(hoveredSprite, brightColor);
+                hoveredSprite.userData.isHovered = true;
+            }
         }
     } else {
         if (isHovering) {
@@ -767,6 +834,12 @@ function onMouseMove(event) {
                     duration: 0.4,
                     ease: "power2.out",
                 });
+                
+                // 원래 색상으로 복원
+                if (hoveredSprite.userData.isHovered) {
+                    updateSpriteColor(hoveredSprite, hoveredSprite.userData.originalColor);
+                    hoveredSprite.userData.isHovered = false;
+                }
                 
                 hoveredSprite = null;
             }
@@ -832,6 +905,13 @@ function onTouchStart(event) {
                 duration: 0.4,
                 ease: "power2.out",
             });
+            
+            // 호버 시 색상을 밝게 변경
+            if (!hoveredSprite.userData.isHovered) {
+                const brightColor = brightenColor(hoveredSprite.userData.originalColor, 1.8);
+                updateSpriteColor(hoveredSprite, brightColor);
+                hoveredSprite.userData.isHovered = true;
+            }
         }
     }
 }
@@ -865,6 +945,13 @@ function onTouchMove(event) {
                     duration: 0.4,
                     ease: "power2.out",
                 });
+                
+                // 호버 시 색상을 밝게 변경
+                if (!hoveredSprite.userData.isHovered) {
+                    const brightColor = brightenColor(hoveredSprite.userData.originalColor, 1.8);
+                    updateSpriteColor(hoveredSprite, brightColor);
+                    hoveredSprite.userData.isHovered = true;
+                }
             }
         } else {
             if (isHovering) {
@@ -883,6 +970,12 @@ function onTouchMove(event) {
                         duration: 0.4,
                         ease: "power2.out",
                     });
+                    
+                    // 원래 색상으로 복원
+                    if (hoveredSprite.userData.isHovered) {
+                        updateSpriteColor(hoveredSprite, hoveredSprite.userData.originalColor);
+                        hoveredSprite.userData.isHovered = false;
+                    }
                     
                     hoveredSprite = null;
                 }
@@ -912,10 +1005,14 @@ function showTeamCard(teamName, description) {
     const teamDescription = document.getElementById("teamDescription");
     const clickGuide = document.getElementById("clickGuide");
 
+    // 현재 팀 인덱스 설정
+    currentTeamIndex = teams.findIndex((team) => team === teamName);
+    
     teamTitle.className = "";
-    const teamIndex = teams.findIndex((team) => team === teamName);
-    if (teamIndex !== -1) {
-        teamTitle.classList.add(`team-${teamIndex}`);
+    if (currentTeamIndex !== -1) {
+        teamTitle.classList.add(`team-${currentTeamIndex}`);
+        // 팀별 색상 적용
+        teamTitle.style.color = teamColors[currentTeamIndex];
     }
 
     teamTitle.textContent = teamName;
@@ -927,6 +1024,40 @@ function showTeamCard(teamName, description) {
         clickGuide.style.opacity = "0";
         clickGuide.style.transform = "translate(-50%, -50%) scale(0.8)";
     }
+}
+
+// 팀 변경 함수
+function changeTeam(direction) {
+    if (currentTeamIndex === -1) return;
+    
+    // 새로운 팀 인덱스 계산
+    let newIndex = currentTeamIndex + direction;
+    
+    // 순환 처리
+    if (newIndex < 0) {
+        newIndex = teams.length - 1;
+    } else if (newIndex >= teams.length) {
+        newIndex = 0;
+    }
+    
+    currentTeamIndex = newIndex;
+    
+    // 팀 정보 업데이트
+    const teamTitle = document.getElementById("teamTitle");
+    const teamDescription = document.getElementById("teamDescription");
+    
+    teamTitle.className = "";
+    teamTitle.classList.add(`team-${currentTeamIndex}`);
+    teamTitle.style.color = teamColors[currentTeamIndex];
+    teamTitle.textContent = teams[currentTeamIndex];
+    teamDescription.textContent = teamDescriptions[currentTeamIndex];
+    
+    // 부드러운 전환 효과
+    const teamCard = document.getElementById("teamCard");
+    teamCard.style.transform = "translate(-50%, -50%) scale(0.95)";
+    setTimeout(() => {
+        teamCard.style.transform = "translate(-50%, -50%) scale(1)";
+    }, 150);
 }
 
 // 팀 카드 닫기 함수
@@ -945,6 +1076,7 @@ function closeTeamCard() {
 
 // 전역 함수로 등록
 window.closeTeamCard = closeTeamCard;
+window.changeTeam = changeTeam;
 
 // 페이지 로드 완료 후 초기화 시작
 document.addEventListener('DOMContentLoaded', function() {
