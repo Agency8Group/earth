@@ -678,7 +678,7 @@ function createTeamSprites() {
         };
 
         const teamSprite = createTeamSprite(team);
-        teamSprite.scale.set(1.5, 0.6, 1.5); // 호버 영역 개선을 위해 크기 증가
+        teamSprite.scale.set(2.0, 0.8, 2.0); // 모바일 터치를 위해 크기 증가 (1.5 → 2.0)
         teamSprite.material.opacity = 0.8; // 기본 투명도 설정
         teamSprite.userData = {
             teamIndex: index,
@@ -708,8 +708,14 @@ function setupMouseInteraction() {
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
     
+    // 데스크톱 이벤트
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("click", onMouseClick);
+    
+    // 모바일 터치 이벤트
+    window.addEventListener("touchstart", onTouchStart, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
 }
 
 // 마우스 이동 이벤트
@@ -750,7 +756,7 @@ function onMouseMove(event) {
             if (hoveredSprite) {
                 // 원래 크기로 복원
                 gsap.to(hoveredSprite.scale, {
-                    x: 1.5, y: 0.6, z: 1.5,
+                    x: 2.0, y: 0.8, z: 2.0, // 새로운 기본 크기로 수정
                     duration: 0.4,
                     ease: "power2.out",
                 });
@@ -793,6 +799,110 @@ function onMouseClick(event) {
         console.log("클릭 가능한 팀이 없음");
         console.log("isHovering:", isHovering);
         console.log("hoveredSprite:", hoveredSprite);
+    }
+}
+
+// 터치 시작 이벤트
+function onTouchStart(event) {
+    event.preventDefault();
+    
+    if (event.touches.length > 0) {
+        const touch = event.touches[0];
+        mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(teamSprites);
+        
+        if (intersects.length > 0) {
+            isHovering = true;
+            hoveredSprite = intersects[0].object;
+            console.log("터치 호버 시작:", hoveredSprite.userData.teamName);
+            
+            // 호버 시 더 크게 확대
+            gsap.to(hoveredSprite.scale, {
+                x: 2.2, y: 0.8, z: 2.2,
+                duration: 0.4,
+                ease: "power2.out",
+            });
+            
+            // 호버 시 밝기 증가
+            gsap.to(hoveredSprite.material, {
+                opacity: 1.0,
+                duration: 0.4,
+                ease: "power2.out",
+            });
+        }
+    }
+}
+
+// 터치 이동 이벤트
+function onTouchMove(event) {
+    event.preventDefault();
+    
+    if (event.touches.length > 0) {
+        const touch = event.touches[0];
+        mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(teamSprites);
+        
+        if (intersects.length > 0) {
+            if (!isHovering) {
+                isHovering = true;
+                hoveredSprite = intersects[0].object;
+                console.log("터치 호버 시작:", hoveredSprite.userData.teamName);
+                
+                gsap.to(hoveredSprite.scale, {
+                    x: 2.2, y: 0.8, z: 2.2,
+                    duration: 0.4,
+                    ease: "power2.out",
+                });
+                
+                gsap.to(hoveredSprite.material, {
+                    opacity: 1.0,
+                    duration: 0.4,
+                    ease: "power2.out",
+                });
+            }
+        } else {
+            if (isHovering) {
+                isHovering = false;
+                console.log("터치 호버 종료:", hoveredSprite.userData.teamName);
+                
+                if (hoveredSprite) {
+                    gsap.to(hoveredSprite.scale, {
+                        x: 2.0, y: 0.8, z: 2.0, // 새로운 기본 크기로 수정
+                        duration: 0.4,
+                        ease: "power2.out",
+                    });
+                    
+                    gsap.to(hoveredSprite.material, {
+                        opacity: 0.8,
+                        duration: 0.4,
+                        ease: "power2.out",
+                    });
+                    
+                    hoveredSprite = null;
+                }
+            }
+        }
+    }
+}
+
+// 터치 종료 이벤트
+function onTouchEnd(event) {
+    event.preventDefault();
+    
+    if (isHovering && hoveredSprite) {
+        console.log("터치 클릭됨:", hoveredSprite.userData.teamName);
+        const teamData = hoveredSprite.userData;
+        showTeamCard(teamData.teamName, teamData.description);
+        
+        // 터치 후 호버 상태 초기화
+        isHovering = false;
+        hoveredSprite = null;
     }
 }
 
