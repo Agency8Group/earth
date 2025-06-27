@@ -43,7 +43,7 @@
                 padding: 30px;
                 color: white;
                 max-width: 400px;
-                z-index: 1000;
+                z-index: 10000;
                 opacity: 0;
                 visibility: hidden;
                 transition: all 0.3s ease;
@@ -73,7 +73,7 @@
                 background: #ffd700;
                 color: #000;
                 border: none;
-                padding: 15px 30px;
+                padding: 25px 30px;
                 border-radius: 8px;
                 cursor: pointer;
                 font-weight: bold;
@@ -82,13 +82,27 @@
                 display: block;
                 margin: 0 auto;
                 min-width: 100px;
+                min-height: 60px;
                 box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+                position: relative;
+                z-index: 1001;
             }
 
             .closeBtn:hover {
                 background: #ffa500;
                 transform: scale(1.1);
                 box-shadow: 0 4px 12px rgba(255, 215, 0, 0.5);
+            }
+
+            /* 닫기 버튼 클릭 영역 확장 */
+            .closeBtn::before {
+                content: "";
+                position: absolute;
+                top: -10px;
+                left: -10px;
+                right: -10px;
+                bottom: -10px;
+                z-index: -1;
             }
 
             /* 팀별 색상 클래스 */
