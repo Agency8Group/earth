@@ -231,7 +231,7 @@ function loadEarthGlobe() {
     const loader = new THREE.GLTFLoader();
     
     loader.load(
-        'earth_globe.glb',
+        'models/earth_globe.glb',
         function (gltf) {
             earthGlobe = gltf.scene;
             
