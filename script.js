@@ -233,7 +233,7 @@ function loadEarthGlobe() {
                          window.location.hostname.includes('github.com');
     
     // 환경에 따라 다른 경로 사용
-    const texturePath = isGitHubPages ? 'textures/' : 'public/textures/';
+    const texturePath = isGitHubPages ? '' : 'public/textures/';
     
     console.log('현재 환경:', isGitHubPages ? 'GitHub Pages' : '로컬');
     console.log('텍스처 경로:', texturePath);
