@@ -539,8 +539,8 @@ function animate() {
         sprite.rotation.z = Math.sin(teamAngle) * 0.05;
         
         // 팀 스프라이트 반짝임 효과 (속도 감소)
-        const time = Date.now() * 0.0003; // 반짝임 속도 감소 (0.0015 → 0.0003)
-        sprite.material.opacity = 0.6 + Math.sin(time * 1.5 + index * 0.3) * 0.4;
+        const time = Date.now() * 0.001; // 반짝임 속도 증가 (0.0003 → 0.001)
+        sprite.material.opacity = 0.6 + Math.sin(time * 3 + index * 0.3) * 0.4; // 주파수 증가 (1.5 → 3)
     });
     
     // 별들 반짝임 효과 (속도 감소)
