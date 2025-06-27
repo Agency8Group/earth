@@ -3,374 +3,205 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Yoonwhan - Space Intro Animation</title>
+        <title>지구본</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap"
             rel="stylesheet"
         />
         <style>
-            * {
+            body {
                 margin: 0;
                 padding: 0;
-                box-sizing: border-box;
-            }
-
-            body {
-                overflow: hidden;
                 background: #000;
-                font-family: "Arial", sans-serif;
+                overflow: hidden;
+                font-family: Arial, sans-serif;
             }
-
             #container {
-                position: relative;
                 width: 100vw;
                 height: 100vh;
             }
-
             #info {
                 position: absolute;
                 top: 20px;
                 left: 20px;
                 color: white;
+                font-size: 18px;
                 z-index: 100;
+            }
+
+            /* 팀 카드 UI 스타일 */
+            #teamCard {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.9);
+                border: 2px solid #ffd700;
+                border-radius: 15px;
+                padding: 30px;
+                color: white;
+                max-width: 400px;
+                z-index: 1000;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(10px);
+            }
+
+            #teamCard.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            #teamTitle {
+                margin: 0 0 20px 0;
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+                color: #ffd700;
+            }
+
+            #teamDescription {
+                margin: 0 0 25px 0;
+                line-height: 1.6;
                 font-size: 16px;
-                font-weight: 600;
+            }
+
+            .closeBtn {
+                background: #ffd700;
+                color: #000;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 16px;
+                transition: all 0.3s ease;
+                display: block;
+                margin: 0 auto;
+                min-width: 100px;
+                box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+            }
+
+            .closeBtn:hover {
+                background: #ffa500;
+                transform: scale(1.1);
+                box-shadow: 0 4px 12px rgba(255, 215, 0, 0.5);
+            }
+
+            /* 팀별 색상 클래스 */
+            .team-0 {
+                color: #e34f26 !important;
+            }
+            .team-1 {
+                color: #1572b6 !important;
+            }
+            .team-2 {
+                color: #f7df1e !important;
+            }
+            .team-3 {
+                color: #06b6d4 !important;
+            }
+            .team-4 {
+                color: #3776ab !important;
+            }
+            .team-5 {
+                color: #4285f4 !important;
+            }
+            .team-6 {
+                color: #00ff88 !important;
+            }
+            .team-7 {
+                color: #ff6b6b !important;
+            }
+
+            /* 클릭 안내 메시지 스타일 */
+            #clickGuide {
+                position: absolute;
+                top: 80%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                text-align: center;
+                z-index: 50;
+                pointer-events: none;
+                opacity: 0.7;
+                transition: all 0.5s ease;
+            }
+
+            .guide-text {
                 font-family: "Rajdhani", sans-serif;
-                opacity: 0.9;
-                text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+                font-size: 24px;
+                font-weight: 600;
+                color: rgba(255, 215, 0, 0.8);
+                text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                margin-bottom: 8px;
+                animation: glowPulse 3s ease-in-out infinite;
+            }
+
+            .guide-subtext {
+                font-family: "Orbitron", sans-serif;
+                font-size: 14px;
+                font-weight: 400;
+                color: rgba(255, 255, 255, 0.6);
+                text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+                letter-spacing: 2px;
+                animation: fadeInOut 4s ease-in-out infinite;
+            }
+
+            @keyframes glowPulse {
+                0%,
+                100% {
+                    opacity: 0.6;
+                    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                }
+                50% {
+                    opacity: 1;
+                    text-shadow: 0 0 20px rgba(255, 215, 0, 0.8),
+                        0 0 30px rgba(255, 215, 0, 0.4);
+                }
+            }
+
+            @keyframes fadeInOut {
+                0%,
+                100% {
+                    opacity: 0.4;
+                    transform: translateY(0px);
+                }
+                50% {
+                    opacity: 0.8;
+                    transform: translateY(-3px);
+                }
+            }
+
+            /* 팀 카드가 표시될 때 안내 메시지 숨김 */
+            #teamCard.show ~ #clickGuide,
+            #teamCard.show + #clickGuide {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
             }
         </style>
     </head>
     <body>
-        <div id="container">
-            <div id="info">
-                <span style="color: #e34f26">HTML5</span> /
-                <span style="color: #1572b6">CSS3</span> /
-                <span style="color: #f7df1e">JavaScript (ES6+)</span> /
-                <span style="color: #06b6d4">Tailwind CSS</span> /
-                <span style="color: #3776ab">Python 3</span> /
-                <span style="color: #4285f4">Google API</span> /
-                <span style="color: #00ff88">Three.js</span>
-            </div>
+        <div id="container"></div>
+
+        <!-- 클릭 안내 메시지 -->
+        <div id="clickGuide">
+            <div class="guide-text">부서를 클릭해주세요</div>
+            <div class="guide-subtext">Click Team</div>
         </div>
 
-        <!-- Three.js CDN -->
+        <!-- 팀 카드 UI -->
+        <div id="teamCard">
+            <h2 id="teamTitle">팀명</h2>
+            <p id="teamDescription">팀 소개 내용이 여기에 표시됩니다.</p>
+            <button class="closeBtn" onclick="closeTeamCard()">닫기</button>
+        </div>
+
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-        <!-- GSAP CDN -->
+        <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-
-        <script>
-            // Scene setup
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(
-                75,
-                window.innerWidth / window.innerHeight,
-                0.1,
-                1000
-            );
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000011);
-            document
-                .getElementById("container")
-                .appendChild(renderer.domElement);
-
-            // Camera position
-            camera.position.z = 5;
-
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
-            scene.add(ambientLight);
-
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(5, 3, 5);
-            scene.add(directionalLight);
-
-            const pointLight = new THREE.PointLight(0x0066ff, 1, 100);
-            pointLight.position.set(-5, 0, 5);
-            scene.add(pointLight);
-
-            // Earth globe - Black Hole
-            const earthGeometry = new THREE.SphereGeometry(1, 32, 32);
-
-            // Create black hole material with dark gradient
-            const blackHoleMaterial = new THREE.MeshPhongMaterial({
-                color: 0x000000,
-                shininess: 100,
-                emissive: 0x111111,
-                emissiveIntensity: 0.1,
-            });
-
-            const earth = new THREE.Mesh(earthGeometry, blackHoleMaterial);
-            scene.add(earth);
-
-            // Add black hole accretion disk (ring around the black hole)
-            const accretionGeometry = new THREE.RingGeometry(1.2, 1.8, 64);
-            const accretionMaterial = new THREE.MeshBasicMaterial({
-                color: 0x8b0000,
-                transparent: true,
-                opacity: 0.6,
-                side: THREE.DoubleSide,
-            });
-            const accretionDisk = new THREE.Mesh(
-                accretionGeometry,
-                accretionMaterial
-            );
-            accretionDisk.rotation.x = Math.PI / 2;
-            scene.add(accretionDisk);
-
-            // Add inner glow ring
-            const glowGeometry = new THREE.RingGeometry(0.8, 1.1, 32);
-            const glowMaterial = new THREE.MeshBasicMaterial({
-                color: 0x4a0404,
-                transparent: true,
-                opacity: 0.8,
-                side: THREE.DoubleSide,
-            });
-            const glowRing = new THREE.Mesh(glowGeometry, glowMaterial);
-            glowRing.rotation.x = Math.PI / 2;
-            scene.add(glowRing);
-
-            // Stars background
-            const starsGeometry = new THREE.BufferGeometry();
-            const starsCount = 2000;
-            const starsPositions = new Float32Array(starsCount * 3);
-
-            for (let i = 0; i < starsCount * 3; i += 3) {
-                starsPositions[i] = (Math.random() - 0.5) * 100;
-                starsPositions[i + 1] = (Math.random() - 0.5) * 100;
-                starsPositions[i + 2] = (Math.random() - 0.5) * 100;
-            }
-
-            starsGeometry.setAttribute(
-                "position",
-                new THREE.BufferAttribute(starsPositions, 3)
-            );
-
-            const starsMaterial = new THREE.PointsMaterial({
-                color: 0xffffff,
-                size: 0.05,
-                transparent: true,
-                opacity: 0.8,
-            });
-
-            const stars = new THREE.Points(starsGeometry, starsMaterial);
-            scene.add(stars);
-
-            // Text "YOON_WHAN_JI" - individual letters
-            const letters = "YOON_WHAN_JI".split("");
-            const letterSprites = [];
-            const letterSpacing = 0.3;
-
-            letters.forEach((letter, index) => {
-                const createLetterSprite = (text) => {
-                    const canvas = document.createElement("canvas");
-                    const context = canvas.getContext("2d");
-                    canvas.width = 256;
-                    canvas.height = 256;
-
-                    // Create golden gradient
-                    const gradient = context.createLinearGradient(
-                        0,
-                        0,
-                        256,
-                        256
-                    );
-                    gradient.addColorStop(0, "#FFD700"); // Bright Gold
-                    gradient.addColorStop(0.3, "#FFA500"); // Orange Gold
-                    gradient.addColorStop(0.7, "#DAA520"); // Goldenrod
-                    gradient.addColorStop(1, "#B8860B"); // Dark Goldenrod
-
-                    context.fillStyle = gradient;
-                    context.font = "900 80px Orbitron"; // Bold futuristic font
-                    context.textAlign = "center";
-                    context.fillText(text, 128, 160);
-
-                    const texture = new THREE.CanvasTexture(canvas);
-                    texture.generateMipmaps = false;
-                    texture.minFilter = THREE.LinearFilter;
-                    texture.magFilter = THREE.LinearFilter;
-                    texture.format = THREE.RGBAFormat;
-                    texture.premultiplyAlpha = false;
-
-                    const spriteMaterial = new THREE.SpriteMaterial({
-                        map: texture,
-                        transparent: true,
-                        alphaTest: 0.1,
-                    });
-
-                    return new THREE.Sprite(spriteMaterial);
-                };
-
-                const letterSprite = createLetterSprite(letter);
-                letterSprite.scale.set(0.8, 0.8, 0.8);
-                letterSprites.push(letterSprite);
-                scene.add(letterSprite);
-            });
-
-            // Technology stack text
-            const techStacks = [
-                "HTML5",
-                "CSS3",
-                "JavaScript (ES6+)",
-                "Tailwind CSS",
-                "Python 3",
-                "Google API",
-                "Three.js",
-            ];
-            const techColors = [
-                "#E34F26", // HTML5 Orange
-                "#1572B6", // CSS3 Blue
-                "#F7DF1E", // JavaScript Yellow
-                "#06B6D4", // Tailwind Cyan
-                "#3776AB", // Python Blue
-                "#4285F4", // Google API Blue
-                "#00FF88", // Three.js Green
-            ];
-            const techSprites = [];
-
-            techStacks.forEach((tech, index) => {
-                const createTechSprite = (text) => {
-                    const canvas = document.createElement("canvas");
-                    const context = canvas.getContext("2d");
-                    canvas.width = 200;
-                    canvas.height = 40;
-
-                    context.fillStyle = techColors[index];
-                    context.font = "600 18px Rajdhani"; // Modern tech font
-                    context.textAlign = "center";
-                    context.fillText(text, 100, 25);
-
-                    const texture = new THREE.CanvasTexture(canvas);
-                    texture.generateMipmaps = false;
-                    texture.minFilter = THREE.LinearFilter;
-                    texture.magFilter = THREE.LinearFilter;
-                    texture.format = THREE.RGBAFormat;
-                    texture.premultiplyAlpha = false;
-
-                    const spriteMaterial = new THREE.SpriteMaterial({
-                        map: texture,
-                        transparent: true,
-                        alphaTest: 0.1,
-                    });
-
-                    return new THREE.Sprite(spriteMaterial);
-                };
-
-                const techSprite = createTechSprite(tech);
-                techSprite.scale.set(0.6, 0.15, 0.6); // Smaller scale to make YOONWHAN JI stand out
-                techSprites.push(techSprite);
-                scene.add(techSprite);
-            });
-
-            // Animation variables
-            let earthRotation = 0;
-            let textAngle = 0;
-            const orbitRadius = 2.5;
-
-            // GSAP animations
-            gsap.to(earth.rotation, {
-                y: Math.PI * 2,
-                duration: 20,
-                repeat: -1,
-                ease: "none",
-            });
-
-            // Animate accretion disk
-            gsap.to(accretionDisk.rotation, {
-                z: Math.PI * 2,
-                duration: 15,
-                repeat: -1,
-                ease: "none",
-            });
-
-            // Animate glow ring
-            gsap.to(glowRing.rotation, {
-                z: -Math.PI * 2,
-                duration: 25,
-                repeat: -1,
-                ease: "none",
-            });
-
-            // Individual letter orbital animation
-            gsap.to(
-                {},
-                {
-                    duration: 30,
-                    repeat: -1,
-                    ease: "power2.inOut",
-                    onUpdate: function () {
-                        textAngle += 0.006;
-
-                        letterSprites.forEach((sprite, index) => {
-                            // Each letter follows the orbit with a smaller delay for closer grouping
-                            // Reverse the order so it reads correctly
-                            const letterAngle =
-                                textAngle +
-                                (letters.length - 1 - index) *
-                                    ((Math.PI * 2) / letters.length) *
-                                    0.3;
-
-                            // Create spherical orbit around the globe
-                            const radius = orbitRadius;
-                            const x = Math.cos(letterAngle) * radius;
-                            const y =
-                                Math.sin(letterAngle * 0.5) * radius * 0.3;
-                            const z = Math.sin(letterAngle) * radius;
-
-                            sprite.position.set(x, y, z);
-
-                            // Make letter always face camera
-                            sprite.lookAt(camera.position);
-
-                            // Add subtle rotation based on position
-                            sprite.rotation.z = Math.sin(letterAngle) * 0.1;
-                        });
-
-                        // Technology stack animation - different orbit
-                        techSprites.forEach((sprite, index) => {
-                            const techAngle =
-                                textAngle * 0.7 +
-                                index * ((Math.PI * 2) / techStacks.length);
-
-                            // Larger orbit for tech stacks
-                            const techRadius = orbitRadius * 1.5;
-                            const x = Math.cos(techAngle) * techRadius;
-                            const y =
-                                Math.sin(techAngle * 0.3) * techRadius * 0.2;
-                            const z = Math.sin(techAngle) * techRadius;
-
-                            sprite.position.set(x, y, z);
-                            sprite.lookAt(camera.position);
-                            sprite.rotation.z = Math.sin(techAngle) * 0.05;
-                        });
-                    },
-                }
-            );
-
-            // Render loop
-            function animate() {
-                requestAnimationFrame(animate);
-
-                // Rotate stars slowly
-                stars.rotation.y += 0.0005;
-
-                renderer.render(scene, camera);
-            }
-
-            // Handle window resize
-            window.addEventListener("resize", () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-
-            // Start animation
-            animate();
-        </script>
+        <script src="script.js"></script>
     </body>
 </html>
