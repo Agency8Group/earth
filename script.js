@@ -24,6 +24,20 @@ let loadedAssets = 0;
 // Glow Sphere 전역 변수 추가
 let earthGlow = null;
 
+// 성능 최적화 변수
+let frameCount = 0;
+let lastTime = 0;
+const targetFPS = 60;
+const frameInterval = 1000 / targetFPS;
+
+// 디바이스 성능 감지
+const isLowEndDevice = navigator.hardwareConcurrency <= 4 || 
+                      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+console.log('디바이스 성능:', isLowEndDevice ? '낮음' : '높음');
+console.log('디바이스 타입:', isMobileDevice ? '모바일' : '데스크톱');
+
 // 팀 정보 설정
 const teams = [
     "경영관리실", "전략기획실", "압타밀 팀", "드리미 팀",
@@ -85,11 +99,17 @@ function init() {
     camera.lookAt(0, 0, 0); // 카메라가 정중앙을 바라보도록 설정
     
     // 렌더러 생성
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ 
+        antialias: !isLowEndDevice, // 성능에 따라 안티앨리어싱 조정
+        powerPreference: "high-performance",
+        stencil: false,
+        depth: true
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000011); // 우주 배경색으로 변경
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !isLowEndDevice; // 성능에 따라 그림자 조정
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isLowEndDevice ? 1 : 2)); // 성능에 따라 픽셀 비율 조정
     document.getElementById('container').appendChild(renderer.domElement);
     
     // 우주 환경 생성
@@ -173,7 +193,7 @@ function createSpaceEnvironment() {
     
     // 밝은 별들 생성
     const starsGeometry = new THREE.BufferGeometry();
-    const starsCount = 4000; // 별 개수 증가
+    const starsCount = isLowEndDevice ? 2000 : 4000; // 성능에 따라 별 개수 조정
     const positions = new Float32Array(starsCount * 3);
     const colors = new Float32Array(starsCount * 3);
     
@@ -212,7 +232,7 @@ function createSpaceEnvironment() {
     starsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     
     const starsMaterial = new THREE.PointsMaterial({
-        size: 0.08, // 별 크기 증가
+        size: isLowEndDevice ? 0.12 : 0.08, // 성능에 따라 별 크기 조정
         vertexColors: true,
         transparent: true,
         opacity: 0, // 초기 투명도 0으로 설정
@@ -235,7 +255,7 @@ function createSpaceEnvironment() {
     // 큰 밝은 별들 제거 - 더 자연스러운 우주 환경
     
     // 은하수 효과 (먼지 구름) - 더 은은하게
-    const nebulaGeometry = new THREE.SphereGeometry(50, 32, 32);
+    const nebulaGeometry = new THREE.SphereGeometry(50, isLowEndDevice ? 16 : 32, isLowEndDevice ? 16 : 32); // 성능에 따라 해상도 조정
     const nebulaMaterial = new THREE.MeshBasicMaterial({
         color: 0x1a1a3a,
         transparent: true,
@@ -256,7 +276,7 @@ function createSpaceEnvironment() {
     
     // 먼지 입자들 - 더 은은하게
     const dustGeometry = new THREE.BufferGeometry();
-    const dustCount = 300; // 먼지 개수 감소
+    const dustCount = isLowEndDevice ? 150 : 300; // 성능에 따라 먼지 개수 조정
     const dustPositions = new Float32Array(dustCount * 3);
     
     for (let i = 0; i < dustCount * 3; i += 3) {
@@ -268,7 +288,7 @@ function createSpaceEnvironment() {
     dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
     
     const dustMaterial = new THREE.PointsMaterial({
-        size: 0.03, // 먼지 크기 감소
+        size: isLowEndDevice ? 0.05 : 0.03, // 성능에 따라 먼지 크기 조정
         color: 0x333355, // 색상 더 어둡게
         transparent: true,
         opacity: 0, // 초기 투명도 0으로 설정
@@ -331,10 +351,10 @@ function loadEarthGlobe() {
                     console.log(`텍스처 로딩 성공: ${url}`);
                     
                     // 텍스처 최적화 설정
-                    texture.generateMipmaps = true;
-                    texture.minFilter = THREE.LinearMipmapLinearFilter;
+                    texture.generateMipmaps = !isLowEndDevice; // 성능에 따라 mipmap 조정
+                    texture.minFilter = isLowEndDevice ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
                     texture.magFilter = THREE.LinearFilter;
-                    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    texture.anisotropy = isLowEndDevice ? 1 : renderer.capabilities.getMaxAnisotropy();
                     texture.flipY = false; // WebGL 최적화
                     texture.premultiplyAlpha = false;
                     
@@ -345,8 +365,8 @@ function loadEarthGlobe() {
                     console.warn(`텍스처 로딩 실패: ${url}`, error);
                     // 대체 텍스처 생성
                     const canvas = document.createElement('canvas');
-                    canvas.width = 512;
-                    canvas.height = 256;
+                    canvas.width = isLowEndDevice ? 256 : 512; // 성능에 따라 해상도 조정
+                    canvas.height = isLowEndDevice ? 128 : 256;
                     const ctx = canvas.getContext('2d');
                     ctx.fillStyle = `#${fallbackColor.toString(16).padStart(6, '0')}`;
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -385,8 +405,8 @@ function loadEarthGlobe() {
     
     // 지구본 생성 함수
     function createEarthGlobe() {
-        // 지구본 지오메트리 생성
-        const earthGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+        // 지구본 지오메트리 생성 - 성능에 따라 해상도 조정
+        const earthGeometry = new THREE.SphereGeometry(1.5, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
         
         // 지구본 머티리얼 생성 (낮/밤 텍스처 블렌딩)
         const earthMaterial = new THREE.MeshPhongMaterial({
@@ -423,7 +443,7 @@ function loadEarthGlobe() {
         
         // 구름 레이어 생성
         if (textures.clouds) {
-            const cloudsGeometry = new THREE.SphereGeometry(1.52, 64, 64);
+            const cloudsGeometry = new THREE.SphereGeometry(1.52, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
             const cloudsMaterial = new THREE.MeshPhongMaterial({
                 map: textures.clouds,
                 transparent: true,
@@ -457,7 +477,7 @@ function loadEarthGlobe() {
     
     // 기본 지구본 생성 함수 (텍스처 로딩 실패 시)
     function createBasicEarthGlobe() {
-        const earthGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+        const earthGeometry = new THREE.SphereGeometry(1.5, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
         const earthMaterial = new THREE.MeshPhongMaterial({
             color: 0x4a90e2,
             shininess: 25,
@@ -511,6 +531,15 @@ function createEarthGlow() {
 
 // 애니메이션 루프
 function animate() {
+    const currentTime = performance.now();
+    
+    // 프레임 레이트 제한 (성능 최적화)
+    if (currentTime - lastTime < frameInterval) {
+        requestAnimationFrame(animate);
+        return;
+    }
+    
+    lastTime = currentTime;
     requestAnimationFrame(animate);
     
     // 로딩이 완료되지 않았으면 정적 렌더링만 수행
@@ -581,26 +610,30 @@ function animate() {
         }
     });
     
-    // 별들 반짝임 효과 (속도 감소)
+    // 별들 반짝임 효과 (속도 감소) - 성능에 따라 조정
     const time = Date.now() * 0.0003; // 별 반짝임 속도 감소 (0.001 → 0.0003)
     const starsFadeInCompleteTime = 500 + 4000; // 별들 페이드인 완료 시간 (0.5초 + 4초)
     
-    scene.children.forEach(child => {
-        if (child.type === 'Points' && child.material.color.getHex() === 0x333355) {
-            // 먼지 입자들은 천천히 회전
-            child.rotation.y += 0.0002; // 먼지 회전 속도 감소 (0.0005 → 0.0002)
-        } else if (child.type === 'Points' && child.material.vertexColors) {
-            // 일반 별들 반짝임 - 페이드인 완료 후에만
-            if (Date.now() > starsFadeInCompleteTime) {
-                child.material.opacity = 0.7 + Math.sin(time * 1.5) * 0.2;
+    // 성능에 따라 별 반짝임 빈도 조정
+    if (!isLowEndDevice || frameCount % 2 === 0) {
+        scene.children.forEach(child => {
+            if (child.type === 'Points' && child.material.color.getHex() === 0x333355) {
+                // 먼지 입자들은 천천히 회전
+                child.rotation.y += 0.0002; // 먼지 회전 속도 감소 (0.0005 → 0.0002)
+            } else if (child.type === 'Points' && child.material.vertexColors) {
+                // 일반 별들 반짝임 - 페이드인 완료 후에만
+                if (Date.now() > starsFadeInCompleteTime) {
+                    child.material.opacity = 0.7 + Math.sin(time * 1.5) * 0.2;
+                }
             }
-        }
-    });
+        });
+    }
     
     if (earthGlow) {
         earthGlow.rotation.y = earthGlobe ? earthGlobe.rotation.y : 0;
     }
     
+    frameCount++;
     renderer.render(scene, camera);
 }
 
@@ -1149,40 +1182,6 @@ function closeTeamCard() {
 // 전역 함수로 등록
 window.closeTeamCard = closeTeamCard;
 window.changeTeam = changeTeam;
-
-// 모바일 환경 감지 및 안내 표시
-function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-function isSmallScreen() {
-    return window.innerWidth <= 900;
-}
-
-function showMobileBlock() {
-    var mobileBlock = document.getElementById("mobileBlock");
-    if (mobileBlock) mobileBlock.style.display = "flex";
-}
-function hideMobileBlock() {
-    var mobileBlock = document.getElementById("mobileBlock");
-    if (mobileBlock) mobileBlock.style.display = "none";
-}
-
-function checkBlocker() {
-    if (isMobileDevice() || isSmallScreen()) {
-        showMobileBlock();
-    } else {
-        hideMobileBlock();
-    }
-}
-
-window.addEventListener('resize', checkBlocker);
-document.addEventListener('DOMContentLoaded', function() {
-    checkBlocker();
-    if (!(isMobileDevice() || isSmallScreen())) {
-        window.onload = checkAndInit;
-    }
-});
 
 // 페이지 로드 완료 후 초기화 시작
 document.addEventListener('DOMContentLoaded', function() {
