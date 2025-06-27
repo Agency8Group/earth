@@ -230,8 +230,18 @@ function createSpaceEnvironment() {
 function loadEarthGlobe() {
     const loader = new THREE.GLTFLoader();
     
+    // 환경 감지: GitHub Pages인지 로컬인지 확인
+    const isGitHubPages = window.location.hostname.includes('github.io') || 
+                         window.location.hostname.includes('github.com');
+    
+    // 환경에 따라 다른 경로 사용
+    const modelPath = isGitHubPages ? 'models/earth_globe.glb' : 'earth_globe.glb';
+    
+    console.log('현재 환경:', isGitHubPages ? 'GitHub Pages' : '로컬');
+    console.log('모델 경로:', modelPath);
+    
     loader.load(
-        'models/earth_globe.glb',
+        modelPath,
         function (gltf) {
             earthGlobe = gltf.scene;
             
