@@ -480,7 +480,7 @@ function createTeamSprites() {
             const spriteMaterial = new THREE.SpriteMaterial({
                 map: texture,
                 transparent: true,
-                alphaTest: 0.05, // 알파 테스트 값 낮춰서 클릭 감도 향상
+                alphaTest: 0.1, // 호버 영역 안정성을 위해 값 증가
                 blending: THREE.AdditiveBlending, // 우주 느낌의 블렌딩
             });
 
@@ -488,7 +488,7 @@ function createTeamSprites() {
         };
 
         const teamSprite = createTeamSprite(team);
-        teamSprite.scale.set(1.2, 0.4, 1.2); // 스케일 더 증가
+        teamSprite.scale.set(1.5, 0.6, 1.5); // 호버 영역 개선을 위해 크기 증가
         teamSprite.material.opacity = 0.8; // 기본 투명도 설정
         teamSprite.userData = {
             teamIndex: index,
@@ -539,7 +539,7 @@ function onMouseMove(event) {
 
             // 호버 시 더 크게 확대
             gsap.to(hoveredSprite.scale, {
-                x: 1.8, y: 0.6, z: 1.8, // 호버 시 크기 대폭 증가
+                x: 2.2, y: 0.8, z: 2.2, // 호버 시 크기 대폭 증가
                 duration: 0.4,
                 ease: "power2.out",
             });
@@ -560,7 +560,7 @@ function onMouseMove(event) {
             if (hoveredSprite) {
                 // 원래 크기로 복원
                 gsap.to(hoveredSprite.scale, {
-                    x: 1.2, y: 0.4, z: 1.2,
+                    x: 1.5, y: 0.6, z: 1.5,
                     duration: 0.4,
                     ease: "power2.out",
                 });
