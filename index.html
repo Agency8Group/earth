@@ -40,14 +40,18 @@
                 background: rgba(0, 0, 0, 0.9);
                 border: 2px solid #ffd700;
                 border-radius: 15px;
-                padding: 30px;
+                padding: 40px;
                 color: white;
-                max-width: 400px;
+                max-width: 450px;
+                min-height: 300px;
                 z-index: 10000;
                 opacity: 0;
                 visibility: hidden;
                 transition: all 0.3s ease;
                 backdrop-filter: blur(10px);
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
             }
 
             #teamCard.show {
@@ -64,16 +68,17 @@
             }
 
             #teamDescription {
-                margin: 0 0 25px 0;
+                margin: 0 0 30px 0;
                 line-height: 1.6;
                 font-size: 16px;
+                flex-grow: 1;
             }
 
             .closeBtn {
                 background: #ffd700;
                 color: #000;
                 border: none;
-                padding: 25px 30px;
+                padding: 12px 25px;
                 border-radius: 8px;
                 cursor: pointer;
                 font-weight: bold;
@@ -81,27 +86,29 @@
                 transition: all 0.3s ease;
                 display: block;
                 margin: 0 auto;
-                min-width: 100px;
-                min-height: 60px;
+                min-width: 80px;
+                min-height: 45px;
                 box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
                 position: relative;
                 z-index: 1001;
+                /* 미러링 환경을 위한 터치 친화적 크기 */
+                touch-action: manipulation;
             }
 
             .closeBtn:hover {
                 background: #ffa500;
-                transform: scale(1.1);
+                transform: scale(1.05);
                 box-shadow: 0 4px 12px rgba(255, 215, 0, 0.5);
             }
 
-            /* 닫기 버튼 클릭 영역 확장 */
+            /* 닫기 버튼 클릭 영역 확장 (미러링 환경 고려) */
             .closeBtn::before {
                 content: "";
                 position: absolute;
-                top: -10px;
-                left: -10px;
-                right: -10px;
-                bottom: -10px;
+                top: -15px;
+                left: -15px;
+                right: -15px;
+                bottom: -15px;
                 z-index: -1;
             }
 
