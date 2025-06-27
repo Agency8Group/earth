@@ -1,5 +1,5 @@
 // Three.js 지구본 애플리케이션
-let scene, camera, renderer, earthGlobe;
+let scene, camera, renderer, earthGlobe, earthClouds;
 let rotationSpeed = 0.005;
 
 // 텍스트 스프라이트 관련 변수
@@ -61,7 +61,7 @@ function init() {
     scene.add(ambientLight);
     
     // 메인 햇빛 (우측 위에서) - 더 강하게
-    const sunLight = new THREE.DirectionalLight(0xffd700, 3.0); // 햇빛 강도 대폭 증가
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.1); // 흰색 햇빛으로 변경, 강도 조정
     sunLight.position.set(15, 20, 10); // 우측 위에서 비추도록
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
@@ -75,17 +75,17 @@ function init() {
     scene.add(sunLight);
     
     // 부드러운 보조 조명
-    const fillLight = new THREE.DirectionalLight(0x87ceeb, 1.0); // 보조광 강도 증가
+    const fillLight = new THREE.DirectionalLight(0x87ceeb, 0.8); // 보조광 강도 조정
     fillLight.position.set(-10, 5, -5);
     scene.add(fillLight);
     
     // 추가 조명 - 지구본을 더 밝게
-    const rimLight = new THREE.DirectionalLight(0xffffff, 1.0); // 림라이트 강화
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.8); // 림라이트 강도 조정
     rimLight.position.set(0, 0, 15);
     scene.add(rimLight);
     
     // 태양빛 추가 조명 - 지구본을 더 밝게 비추기
-    const extraSunLight = new THREE.DirectionalLight(0xffffcc, 1.5); // 따뜻한 태양빛
+    const extraSunLight = new THREE.DirectionalLight(0xffffff, 0.2); // 흰색으로 변경, 강도 조정
     extraSunLight.position.set(20, 15, 5);
     scene.add(extraSunLight);
     
@@ -226,69 +226,73 @@ function createSpaceEnvironment() {
     scene.add(dust);
 }
 
-// GLB 파일 로드 함수
+// 지구본 생성 함수 (텍스처 사용)
 function loadEarthGlobe() {
-    const loader = new THREE.GLTFLoader();
-    
     // 환경 감지: GitHub Pages인지 로컬인지 확인
     const isGitHubPages = window.location.hostname.includes('github.io') || 
                          window.location.hostname.includes('github.com');
     
     // 환경에 따라 다른 경로 사용
-    const modelPath = isGitHubPages ? 'models/earth_globe.glb' : 'earth_globe.glb';
+    const texturePath = isGitHubPages ? 'textures/' : 'public/textures/';
     
     console.log('현재 환경:', isGitHubPages ? 'GitHub Pages' : '로컬');
-    console.log('모델 경로:', modelPath);
+    console.log('텍스처 경로:', texturePath);
     
-    loader.load(
-        modelPath,
-        function (gltf) {
-            earthGlobe = gltf.scene;
-            
-            // 지구본 크기를 더 작게 조정
-            earthGlobe.scale.set(0.2, 0.2, 0.2);
-            
-            // 지구본을 정확히 중앙에 고정 (Y축만 약간 위로)
-            earthGlobe.position.set(0, 2, 0); // X, Z축은 0으로 고정
-            
-            // 지구본에 그림자 설정
-            earthGlobe.traverse(function(child) {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
-            });
-            
-            // 지구본을 씬에 추가
-            scene.add(earthGlobe);
-            
-            console.log('지구본 로드 완료!');
-        },
-        function (xhr) {
-            console.log((xhr.loaded / xhr.total * 100) + '% 로드됨');
-        },
-        function (error) {
-            console.error('지구본 로드 중 오류 발생:', error);
-            // 로드 실패 시 기본 구체 생성
-            createDefaultGlobe();
-        }
-    );
-}
-
-// 기본 구체 생성 (GLB 로드 실패 시)
-function createDefaultGlobe() {
-    const geometry = new THREE.SphereGeometry(1.5, 32, 32); // 크기를 더 작게
-    const material = new THREE.MeshPhongMaterial({
-        color: 0x0077be,
+    // 텍스처 로더
+    const textureLoader = new THREE.TextureLoader();
+    
+    // 지구본 텍스처들 로드
+    const dayTexture = textureLoader.load(texturePath + '8k_earth_daymap.jpg');
+    const nightTexture = textureLoader.load(texturePath + '8k_earth_nightmap.jpg');
+    const cloudsTexture = textureLoader.load(texturePath + '8k_earth_clouds.jpg');
+    const normalMap = textureLoader.load(texturePath + '8k_earth_normal_map.jpg');
+    const specularMap = textureLoader.load(texturePath + '8k_earth_specular_map.jpg');
+    
+    // 지구본 지오메트리 생성
+    const earthGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+    
+    // 지구본 머티리얼 생성 (낮/밤 텍스처 블렌딩)
+    const earthMaterial = new THREE.MeshPhongMaterial({
+        map: dayTexture,
+        normalMap: normalMap,
+        specularMap: specularMap,
+        shininess: 25,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.9
     });
-    earthGlobe = new THREE.Mesh(geometry, material);
-    earthGlobe.position.set(0, 0, 0); // 정중앙에 고정
+    
+    // 지구본 메시 생성
+    earthGlobe = new THREE.Mesh(earthGeometry, earthMaterial);
+    
+    // 지구본 크기와 위치 설정
+    earthGlobe.scale.set(0.8, 0.8, 0.8);
+    earthGlobe.position.set(0, 0, 0);
+    
+    // 그림자 설정
     earthGlobe.castShadow = true;
     earthGlobe.receiveShadow = true;
+    
+    // 씬에 추가
     scene.add(earthGlobe);
-    console.log('기본 지구본 생성됨');
+    
+    // 구름 레이어 생성
+    const cloudsGeometry = new THREE.SphereGeometry(1.52, 64, 64);
+    const cloudsMaterial = new THREE.MeshPhongMaterial({
+        map: cloudsTexture,
+        transparent: true,
+        opacity: 0.3,
+        blending: THREE.AdditiveBlending
+    });
+    
+    const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
+    clouds.scale.set(0.8, 0.8, 0.8);
+    clouds.position.set(0, 0, 0);
+    scene.add(clouds);
+    
+    // 구름도 회전하도록 저장
+    earthClouds = clouds;
+    
+    console.log('텍스처 지구본 생성 완료!');
 }
 
 // 애니메이션 루프
@@ -299,7 +303,13 @@ function animate() {
     if (earthGlobe) {
         earthGlobe.rotation.y += rotationSpeed;
         // 지구본을 정중앙에 고정 유지
-        earthGlobe.position.set(0, 2, 0);
+        earthGlobe.position.set(0, 0, 0);
+    }
+    
+    // 구름 레이어도 회전 (지구본보다 조금 빠르게)
+    if (earthClouds) {
+        earthClouds.rotation.y += rotationSpeed * 1.2;
+        earthClouds.position.set(0, 0, 0);
     }
     
     // 텍스트와 팀 스프라이트 공전 애니메이션
@@ -637,4 +647,4 @@ function closeTeamCard() {
 window.closeTeamCard = closeTeamCard;
 
 // 애플리케이션 시작
-init(); 
+init();
