@@ -77,13 +77,11 @@ function init() {
     
     console.log('Three.js 라이브러리 로딩 완료, 초기화 시작');
     
-    // 로딩 매니저 설정
+    // 로딩 매니저 설정 - 더 빠른 로딩
     loadingManager = new THREE.LoadingManager();
     
     loadingManager.onLoad = function() {
         console.log('모든 에셋 로딩 완료!');
-        // 애니메이션 루프 시작
-        animate();
     };
     
     loadingManager.onError = function(url) {
@@ -111,6 +109,9 @@ function init() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, isLowEndDevice ? 1 : 2)); // 성능에 따라 픽셀 비율 조정
     document.getElementById('container').appendChild(renderer.domElement);
+    
+    // 즉시 기본 지구본 생성 (텍스처 로딩 전에)
+    createBasicEarthGlobe();
     
     // 우주 환경 생성
     createSpaceEnvironment();
@@ -148,9 +149,6 @@ function init() {
     extraSunLight.position.set(20, 15, 5);
     scene.add(extraSunLight);
     
-    // GLB 파일 로드
-    loadEarthGlobe();
-    
     // 텍스트 스프라이트 생성
     createTextSprites();
     createTeamSprites();
@@ -160,6 +158,12 @@ function init() {
     
     // 윈도우 리사이즈 이벤트
     window.addEventListener('resize', onWindowResize);
+    
+    // 즉시 애니메이션 루프 시작
+    animate();
+    
+    // 텍스처 로딩 시작 (백그라운드에서)
+    loadEarthGlobe();
 }
 
 // 우주 환경 생성 함수
@@ -235,22 +239,13 @@ function createSpaceEnvironment() {
         size: isLowEndDevice ? 0.12 : 0.08, // 성능에 따라 별 크기 조정
         vertexColors: true,
         transparent: true,
-        opacity: 0, // 초기 투명도 0으로 설정
+        opacity: 0.9, // 즉시 보이도록 설정
         map: createStarTexture(), // 원형 별 텍스처 적용
         blending: THREE.AdditiveBlending // 우주 느낌의 블렌딩
     });
     
     const stars = new THREE.Points(starsGeometry, starsMaterial);
     scene.add(stars);
-    
-    // 별들 페이드인 애니메이션
-    setTimeout(() => {
-        gsap.to(starsMaterial, {
-            opacity: 0.9,
-            duration: 6,
-            ease: "power2.out"
-        });
-    }, 1000); // 1초 후 시작
     
     // 큰 밝은 별들 제거 - 더 자연스러운 우주 환경
     
@@ -259,20 +254,11 @@ function createSpaceEnvironment() {
     const nebulaMaterial = new THREE.MeshBasicMaterial({
         color: 0x1a1a3a,
         transparent: true,
-        opacity: 0, // 초기 투명도 0으로 설정
+        opacity: 0.05, // 즉시 보이도록 설정
         side: THREE.BackSide
     });
     const nebula = new THREE.Mesh(nebulaGeometry, nebulaMaterial);
     scene.add(nebula);
-    
-    // 은하수 페이드인 애니메이션
-    setTimeout(() => {
-        gsap.to(nebulaMaterial, {
-            opacity: 0.05,
-            duration: 7,
-            ease: "power2.out"
-        });
-    }, 1500); // 1.5초 후 시작
     
     // 먼지 입자들 - 더 은은하게
     const dustGeometry = new THREE.BufferGeometry();
@@ -291,22 +277,13 @@ function createSpaceEnvironment() {
         size: isLowEndDevice ? 0.05 : 0.03, // 성능에 따라 먼지 크기 조정
         color: 0x333355, // 색상 더 어둡게
         transparent: true,
-        opacity: 0, // 초기 투명도 0으로 설정
+        opacity: 0.2, // 즉시 보이도록 설정
         map: createStarTexture(), // 먼지도 원형으로
         blending: THREE.AdditiveBlending
     });
     
     const dust = new THREE.Points(dustGeometry, dustMaterial);
     scene.add(dust);
-    
-    // 먼지 페이드인 애니메이션
-    setTimeout(() => {
-        gsap.to(dustMaterial, {
-            opacity: 0.2,
-            duration: 6.5,
-            ease: "power2.out"
-        });
-    }, 2000); // 2초 후 시작
 }
 
 // 지구본 생성 함수 (텍스처 사용)
@@ -387,11 +364,11 @@ function loadEarthGlobe() {
     // 텍스처들을 순차적으로 로드
     async function loadAllTextures() {
         try {
-            // 가장 중요한 텍스처부터 로드
+            // 가장 중요한 텍스처부터 로드 (우선순위 조정)
             textures.day = await loadTexture(texturePath + '8k_earth_daymap.jpg', 0x4a90e2);
+            textures.clouds = await loadTexture(texturePath + '8k_earth_clouds.jpg', 0xffffff);
             textures.normal = await loadTexture(texturePath + '8k_earth_normal_map.jpg', 0x888888);
             textures.specular = await loadTexture(texturePath + '8k_earth_specular_map.jpg', 0x222222);
-            textures.clouds = await loadTexture(texturePath + '8k_earth_clouds.jpg', 0xffffff);
             textures.night = await loadTexture(texturePath + '8k_earth_nightmap.jpg', 0x1a1a2e);
             
             createEarthGlobe();
@@ -405,6 +382,11 @@ function loadEarthGlobe() {
     
     // 지구본 생성 함수
     function createEarthGlobe() {
+        // 기존 기본 지구본이 있으면 제거
+        if (earthGlobe) {
+            scene.remove(earthGlobe);
+        }
+        
         // 지구본 지오메트리 생성 - 성능에 따라 해상도 조정
         const earthGeometry = new THREE.SphereGeometry(1.5, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
         
@@ -415,7 +397,7 @@ function loadEarthGlobe() {
             specularMap: textures.specular,
             shininess: 25,
             transparent: true,
-            opacity: 0 // 초기 투명도 0으로 설정
+            opacity: 0.9 // 즉시 보이도록 설정
         });
         
         // 지구본 메시 생성
@@ -432,14 +414,7 @@ function loadEarthGlobe() {
         // 씬에 추가
         scene.add(earthGlobe);
         
-        // 지구본 페이드인 애니메이션
-        setTimeout(() => {
-            gsap.to(earthMaterial, {
-                opacity: 0.9,
-                duration: 8,
-                ease: "power2.out"
-            });
-        }, 2500); // 2.5초 후 시작
+        console.log('텍스처 지구본 생성 완료!');
         
         // 구름 레이어 생성
         if (textures.clouds) {
@@ -447,7 +422,7 @@ function loadEarthGlobe() {
             const cloudsMaterial = new THREE.MeshPhongMaterial({
                 map: textures.clouds,
                 transparent: true,
-                opacity: 0, // 초기 투명도 0으로 설정
+                opacity: 0.3, // 즉시 보이도록 설정
                 blending: THREE.AdditiveBlending
             });
             
@@ -458,57 +433,39 @@ function loadEarthGlobe() {
             
             // 구름도 회전하도록 저장
             earthClouds = clouds;
-            
-            // 구름 페이드인 애니메이션
-            setTimeout(() => {
-                gsap.to(cloudsMaterial, {
-                    opacity: 0.3,
-                    duration: 9,
-                    ease: "power2.out"
-                });
-            }, 3500); // 3.5초 후 시작
         }
         
-        console.log('텍스처 지구본 생성 완료!');
-        
-        // Glow Sphere 생성
-        createEarthGlow();
-    }
-    
-    // 기본 지구본 생성 함수 (텍스처 로딩 실패 시)
-    function createBasicEarthGlobe() {
-        const earthGeometry = new THREE.SphereGeometry(1.5, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
-        const earthMaterial = new THREE.MeshPhongMaterial({
-            color: 0x4a90e2,
-            shininess: 25,
-            transparent: true,
-            opacity: 0 // 초기 투명도 0으로 설정
-        });
-        
-        earthGlobe = new THREE.Mesh(earthGeometry, earthMaterial);
-        earthGlobe.scale.set(0.8, 0.8, 0.8);
-        earthGlobe.position.set(0, 0, 0);
-        earthGlobe.castShadow = true;
-        earthGlobe.receiveShadow = true;
-        scene.add(earthGlobe);
-        
-        // 기본 지구본 페이드인 애니메이션
-        setTimeout(() => {
-            gsap.to(earthMaterial, {
-                opacity: 0.9,
-                duration: 8,
-                ease: "power2.out"
-            });
-        }, 2500); // 2.5초 후 시작
-        
-        console.log('기본 지구본 생성 완료!');
-        
-        // Glow Sphere 생성
-        createEarthGlow();
+        // Glow Sphere 생성 (이미 있으면 업데이트)
+        if (!earthGlow) {
+            createEarthGlow();
+        }
     }
     
     // 텍스처 로딩 시작
     loadAllTextures();
+}
+
+// 기본 지구본 생성 함수 (텍스처 로딩 실패 시)
+function createBasicEarthGlobe() {
+    const earthGeometry = new THREE.SphereGeometry(1.5, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
+    const earthMaterial = new THREE.MeshPhongMaterial({
+        color: 0x4a90e2,
+        shininess: 25,
+        transparent: true,
+        opacity: 0.9 // 즉시 보이도록 설정
+    });
+    
+    earthGlobe = new THREE.Mesh(earthGeometry, earthMaterial);
+    earthGlobe.scale.set(0.8, 0.8, 0.8);
+    earthGlobe.position.set(0, 0, 0);
+    earthGlobe.castShadow = true;
+    earthGlobe.receiveShadow = true;
+    scene.add(earthGlobe);
+    
+    console.log('기본 지구본 생성 완료!');
+    
+    // Glow Sphere 생성
+    createEarthGlow();
 }
 
 // Glow Sphere 생성 함수
@@ -561,8 +518,8 @@ function animate() {
         earthClouds.position.set(0, 0, 0);
     }
     
-    // 텍스트와 팀 스프라이트 공전 애니메이션 (속도 대폭 감소)
-    textAngle += 0.002; // 텍스트 공전 속도 대폭 감소 (0.006 → 0.002)
+    // 텍스트와 팀 스프라이트 공전 애니메이션 (속도 증가)
+    textAngle += 0.004; // 텍스트 공전 속도 증가 (0.002 → 0.004)
     
     // 글자 공전
     const letters = "In-House Magazine".split("");
@@ -580,7 +537,7 @@ function animate() {
         sprite.rotation.z = Math.sin(letterAngle) * 0.1;
         
         // 페이드인 애니메이션이 완료된 후에만 반짝임 효과 적용
-        const fadeInCompleteTime = 4000 + sprite.userData.fadeInDelay * 1000 + 5000; // 페이드인 완료 시간
+        const fadeInCompleteTime = 800 + sprite.userData.fadeInDelay * 1000 + 1000; // 페이드인 완료 시간 (1500에서 단축)
         if (Date.now() > fadeInCompleteTime) {
             const time = Date.now() * 0.0005; // 반짝임 속도 감소 (0.001 → 0.0005)
             const baseOpacity = 1; // 기본 투명도를 1로 설정
@@ -588,9 +545,9 @@ function animate() {
         }
     });
 
-    // 팀 공전 (더 큰 궤도, 속도 대폭 감소)
+    // 팀 공전 (더 큰 궤도, 속도 증가)
     teamSprites.forEach((sprite, index) => {
-        const teamAngle = textAngle * 0.5 + index * ((Math.PI * 2) / teams.length); // 팀 공전 속도 감소 (0.7 → 0.5)
+        const teamAngle = textAngle * 0.7 + index * ((Math.PI * 2) / teams.length); // 팀 공전 속도 증가 (0.5 → 0.7)
 
         const teamRadius = orbitRadius * 1.2; // 팀 궤도 반지름 감소 (1.5 → 1.2)
         const x = Math.cos(teamAngle) * teamRadius + 0.3; // 텍스트 오른쪽으로 더 이동 (0.0 → +0.3)
@@ -602,7 +559,7 @@ function animate() {
         sprite.rotation.z = Math.sin(teamAngle) * 0.05;
         
         // 페이드인 애니메이션이 완료된 후에만 반짝임 효과 적용
-        const fadeInCompleteTime = 6000 + sprite.userData.fadeInDelay * 1000 + 4000; // 페이드인 완료 시간
+        const fadeInCompleteTime = 1200 + sprite.userData.fadeInDelay * 1000 + 1500; // 페이드인 완료 시간 (2500에서 단축)
         if (Date.now() > fadeInCompleteTime) {
             const time = Date.now() * 0.001; // 반짝임 속도 증가 (0.0003 → 0.001)
             const baseOpacity = 0.8; // 기본 투명도를 0.8로 설정
@@ -612,7 +569,7 @@ function animate() {
     
     // 별들 반짝임 효과 (속도 감소) - 성능에 따라 조정
     const time = Date.now() * 0.0003; // 별 반짝임 속도 감소 (0.001 → 0.0003)
-    const starsFadeInCompleteTime = 1000 + 6000; // 별들 페이드인 완료 시간 (1초 + 6초)
+    const starsFadeInCompleteTime = 0; // 별들 페이드인 완료 시간 (즉시 시작)
     
     // 성능에 따라 별 반짝임 빈도 조정
     if (!isLowEndDevice || frameCount % 2 === 0) {
@@ -621,10 +578,8 @@ function animate() {
                 // 먼지 입자들은 천천히 회전
                 child.rotation.y += 0.0002; // 먼지 회전 속도 감소 (0.0005 → 0.0002)
             } else if (child.type === 'Points' && child.material.vertexColors) {
-                // 일반 별들 반짝임 - 페이드인 완료 후에만
-                if (Date.now() > starsFadeInCompleteTime) {
-                    child.material.opacity = 0.7 + Math.sin(time * 1.5) * 0.2;
-                }
+                // 일반 별들 반짝임 - 즉시 시작
+                child.material.opacity = 0.7 + Math.sin(time * 1.5) * 0.2;
             }
         });
     }
@@ -699,7 +654,7 @@ function createTextSprites() {
                 transparent: true,
                 alphaTest: 0.1,
                 blending: THREE.AdditiveBlending, // 우주 느낌의 블렌딩
-                opacity: 0 // 초기 투명도 0으로 설정
+                opacity: 0.3 // 초기 투명도를 0.3으로 설정 (0에서 증가)
             });
 
             return new THREE.Sprite(spriteMaterial);
@@ -707,9 +662,18 @@ function createTextSprites() {
 
         const letterSprite = createLetterSprite(letter);
         letterSprite.scale.set(0.6, 0.6, 0.6);
+        
+        // 초기 위치를 자연스럽게 설정 (원형으로 분산)
+        const initialAngle = (index / letters.length) * Math.PI * 2;
+        const radius = orbitRadius;
+        const x = Math.cos(initialAngle) * radius;
+        const y = Math.sin(initialAngle * 0.5) * radius * 0.3;
+        const z = Math.sin(initialAngle) * radius;
+        letterSprite.position.set(x, y, z);
+        
         letterSprite.userData = {
             originalOpacity: 1,
-            fadeInDelay: index * 0.1 // 각 글자마다 0.1초씩 지연
+            fadeInDelay: index * 0.03 // 각 글자마다 0.03초씩 지연 (0.05에서 단축)
         };
         letterSprites.push(letterSprite);
         scene.add(letterSprite);
@@ -718,10 +682,10 @@ function createTextSprites() {
         setTimeout(() => {
             gsap.to(letterSprite.material, {
                 opacity: 1,
-                duration: 5,
+                duration: 1, // 2초에서 1초로 단축
                 ease: "power2.out"
             });
-        }, 4000 + letterSprite.userData.fadeInDelay * 1000); // 4초 후부터 시작
+        }, 800 + letterSprite.userData.fadeInDelay * 1000); // 1.5초에서 0.8초로 단축
     });
 }
 
@@ -765,7 +729,7 @@ function createTeamSprites() {
                 transparent: true,
                 alphaTest: 0.1, // 호버 영역 안정성을 위해 값 증가
                 blending: THREE.AdditiveBlending, // 우주 느낌의 블렌딩
-                opacity: 0 // 초기 투명도 0으로 설정
+                opacity: 0.4 // 초기 투명도를 0.4으로 설정 (0에서 증가)
             });
 
             return new THREE.Sprite(spriteMaterial);
@@ -773,13 +737,22 @@ function createTeamSprites() {
 
         const teamSprite = createTeamSprite(team);
         teamSprite.scale.set(2.0, 0.8, 2.0); // 모바일 터치를 위해 크기 증가 (1.5 → 2.0)
+        
+        // 초기 위치를 자연스럽게 설정 (원형으로 분산)
+        const initialTeamAngle = (index / teams.length) * Math.PI * 2;
+        const teamRadius = orbitRadius * 1.2;
+        const x = Math.cos(initialTeamAngle) * teamRadius + 0.3;
+        const y = Math.sin(initialTeamAngle * 0.3) * teamRadius * 0.2 - 0.5;
+        const z = Math.sin(initialTeamAngle) * teamRadius;
+        teamSprite.position.set(x, y, z);
+        
         teamSprite.userData = {
             teamIndex: index,
             teamName: team,
             description: teamDescriptions[index],
             originalColor: teamColors[index], // 원본 색상 저장
             isHovered: false, // 호버 상태 추적
-            fadeInDelay: index * 0.15 // 각 팀마다 0.15초씩 지연
+            fadeInDelay: index * 0.05 // 각 팀마다 0.05초씩 지연 (0.08에서 단축)
         };
         teamSprites.push(teamSprite);
         scene.add(teamSprite);
@@ -788,10 +761,10 @@ function createTeamSprites() {
         setTimeout(() => {
             gsap.to(teamSprite.material, {
                 opacity: 0.8,
-                duration: 6,
+                duration: 1.5, // 2.5초에서 1.5초로 단축
                 ease: "power2.out"
             });
-        }, 6000 + teamSprite.userData.fadeInDelay * 1000); // 6초 후부터 시작
+        }, 1200 + teamSprite.userData.fadeInDelay * 1000); // 2.5초에서 1.2초로 단축
         
         // 디버깅: 팀 스프라이트 생성 확인
         console.log(`팀 스프라이트 생성: ${team} (인덱스: ${index})`);
