@@ -322,9 +322,16 @@ function loadEarthGlobe() {
     // 텍스처 로딩 함수 (에러 핸들링 포함)
     function loadTexture(url, fallbackColor = 0x444444) {
         return new Promise((resolve) => {
+            // GitHub Pages에서 CORS 문제를 피하기 위한 타임아웃 설정
+            const timeout = setTimeout(() => {
+                console.warn(`텍스처 로딩 타임아웃: ${url}`);
+                createFallbackTexture(fallbackColor).then(resolve);
+            }, 10000); // 10초 타임아웃
+            
             textureLoader.load(
                 url,
                 (texture) => {
+                    clearTimeout(timeout);
                     console.log(`텍스처 로딩 성공: ${url}`);
                     
                     // 텍스처 최적화 설정
@@ -339,44 +346,94 @@ function loadEarthGlobe() {
                 },
                 undefined,
                 (error) => {
+                    clearTimeout(timeout);
                     console.warn(`텍스처 로딩 실패: ${url}`, error);
                     // 대체 텍스처 생성
-                    const canvas = document.createElement('canvas');
-                    canvas.width = isLowEndDevice ? 256 : 512; // 성능에 따라 해상도 조정
-                    canvas.height = isLowEndDevice ? 128 : 256;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = `#${fallbackColor.toString(16).padStart(6, '0')}`;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    const fallbackTexture = new THREE.CanvasTexture(canvas);
-                    
-                    // 대체 텍스처도 최적화 설정
-                    fallbackTexture.generateMipmaps = false;
-                    fallbackTexture.minFilter = THREE.LinearFilter;
-                    fallbackTexture.magFilter = THREE.LinearFilter;
-                    fallbackTexture.flipY = false;
-                    
-                    resolve(fallbackTexture);
+                    createFallbackTexture(fallbackColor).then(resolve);
                 }
             );
+        });
+    }
+    
+    // 대체 텍스처 생성 함수
+    function createFallbackTexture(fallbackColor) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = isLowEndDevice ? 256 : 512; // 성능에 따라 해상도 조정
+            canvas.height = isLowEndDevice ? 128 : 256;
+            const ctx = canvas.getContext('2d');
+            
+            // 더 자연스러운 대체 텍스처 생성
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, `#${fallbackColor.toString(16).padStart(6, '0')}`);
+            gradient.addColorStop(1, `#${(fallbackColor + 0x222222).toString(16).padStart(6, '0')}`);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 간단한 패턴 추가
+            ctx.fillStyle = `rgba(255, 255, 255, 0.1)`;
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const size = Math.random() * 3 + 1;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            const fallbackTexture = new THREE.CanvasTexture(canvas);
+            
+            // 대체 텍스처도 최적화 설정
+            fallbackTexture.generateMipmaps = false;
+            fallbackTexture.minFilter = THREE.LinearFilter;
+            fallbackTexture.magFilter = THREE.LinearFilter;
+            fallbackTexture.flipY = false;
+            
+            resolve(fallbackTexture);
         });
     }
     
     // 텍스처들을 순차적으로 로드
     async function loadAllTextures() {
         try {
-            // 가장 중요한 텍스처부터 로드 (우선순위 조정)
-            textures.day = await loadTexture(texturePath + '8k_earth_daymap.jpg', 0x4a90e2);
-            textures.clouds = await loadTexture(texturePath + '8k_earth_clouds.jpg', 0xffffff);
-            textures.normal = await loadTexture(texturePath + '8k_earth_normal_map.jpg', 0x888888);
-            textures.specular = await loadTexture(texturePath + '8k_earth_specular_map.jpg', 0x222222);
-            textures.night = await loadTexture(texturePath + '8k_earth_nightmap.jpg', 0x1a1a2e);
+            console.log('텍스처 로딩 시작...');
             
+            // 가장 중요한 텍스처부터 로드 (우선순위 조정)
+            console.log('주요 텍스처 로딩 중...');
+            textures.day = await loadTexture(texturePath + '8k_earth_daymap.jpg', 0x4a90e2);
+            console.log('day 텍스처 로딩 완료');
+            
+            textures.clouds = await loadTexture(texturePath + '8k_earth_clouds.jpg', 0xffffff);
+            console.log('clouds 텍스처 로딩 완료');
+            
+            textures.normal = await loadTexture(texturePath + '8k_earth_normal_map.jpg', 0x888888);
+            console.log('normal 텍스처 로딩 완료');
+            
+            textures.specular = await loadTexture(texturePath + '8k_earth_specular_map.jpg', 0x222222);
+            console.log('specular 텍스처 로딩 완료');
+            
+            textures.night = await loadTexture(texturePath + '8k_earth_nightmap.jpg', 0x1a1a2e);
+            console.log('night 텍스처 로딩 완료');
+            
+            console.log('모든 텍스처 로딩 완료, 지구본 생성 시작');
             createEarthGlobe();
             
         } catch (error) {
             console.error('텍스처 로딩 중 오류 발생:', error);
-            // 기본 지구본 생성
-            createBasicEarthGlobe();
+            console.log('기본 지구본으로 대체합니다.');
+            // 기본 지구본 생성 (투명하게 유지)
+            if (!earthGlobe) {
+                createBasicEarthGlobe();
+            }
+            // 기존 투명 지구본을 점진적으로 보이게 하기
+            if (earthGlobe && earthGlobe.material) {
+                gsap.to(earthGlobe.material, {
+                    opacity: 0.9,
+                    duration: 2,
+                    ease: "power2.out"
+                });
+            }
         }
     }
     
@@ -397,7 +454,7 @@ function loadEarthGlobe() {
             specularMap: textures.specular,
             shininess: 25,
             transparent: true,
-            opacity: 0.9 // 즉시 보이도록 설정
+            opacity: 0 // 처음에는 투명하게 시작
         });
         
         // 지구본 메시 생성
@@ -414,6 +471,13 @@ function loadEarthGlobe() {
         // 씬에 추가
         scene.add(earthGlobe);
         
+        // 부드러운 페이드인 애니메이션
+        gsap.to(earthMaterial, {
+            opacity: 0.9,
+            duration: 1.5,
+            ease: "power2.out"
+        });
+        
         console.log('텍스처 지구본 생성 완료!');
         
         // 구름 레이어 생성
@@ -422,7 +486,7 @@ function loadEarthGlobe() {
             const cloudsMaterial = new THREE.MeshPhongMaterial({
                 map: textures.clouds,
                 transparent: true,
-                opacity: 0.3, // 즉시 보이도록 설정
+                opacity: 0, // 처음에는 투명하게 시작
                 blending: THREE.AdditiveBlending
             });
             
@@ -433,6 +497,14 @@ function loadEarthGlobe() {
             
             // 구름도 회전하도록 저장
             earthClouds = clouds;
+            
+            // 구름 부드러운 페이드인 애니메이션
+            gsap.to(cloudsMaterial, {
+                opacity: 0.3,
+                duration: 2,
+                ease: "power2.out",
+                delay: 0.5 // 지구본보다 조금 늦게 시작
+            });
         }
         
         // Glow Sphere 생성 (이미 있으면 업데이트)
@@ -452,7 +524,7 @@ function createBasicEarthGlobe() {
         color: 0x4a90e2,
         shininess: 25,
         transparent: true,
-        opacity: 0.9 // 즉시 보이도록 설정
+        opacity: 0 // 완전 투명하게 설정
     });
     
     earthGlobe = new THREE.Mesh(earthGeometry, earthMaterial);
@@ -462,7 +534,7 @@ function createBasicEarthGlobe() {
     earthGlobe.receiveShadow = true;
     scene.add(earthGlobe);
     
-    console.log('기본 지구본 생성 완료!');
+    console.log('투명 기본 지구본 생성 완료!');
     
     // Glow Sphere 생성
     createEarthGlow();
