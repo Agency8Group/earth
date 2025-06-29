@@ -95,7 +95,7 @@ function init() {
     
     // 카메라 생성
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 0, 8); // 카메라를 정중앙에서 뒤로 이동
+    camera.position.set(0, 0, 5); // 카메라를 정중앙에서 뒤로 이동
     camera.lookAt(0, 0, 0); // 카메라가 정중앙을 바라보도록 설정
     
     // 렌더러 생성
