@@ -326,7 +326,7 @@ function loadEarthGlobe() {
             const timeout = setTimeout(() => {
                 console.warn(`텍스처 로딩 타임아웃: ${url}`);
                 createFallbackTexture(fallbackColor).then(resolve);
-            }, 10000); // 10초 타임아웃
+            }, 5000); // 10초에서 5초로 단축
             
             textureLoader.load(
                 url,
@@ -399,28 +399,46 @@ function loadEarthGlobe() {
         try {
             console.log('텍스처 로딩 시작...');
             
-            // 가장 중요한 텍스처부터 로드 (우선순위 조정)
-            console.log('주요 텍스처 로딩 중...');
-            textures.day = await loadTexture(texturePath + '8k_earth_daymap.jpg', 0x4a90e2);
-            console.log('day 텍스처 로딩 완료');
+            // 병렬 로딩으로 속도 향상
+            console.log('주요 텍스처 병렬 로딩 중...');
+            const texturePromises = [
+                loadTexture(texturePath + '8k_earth_daymap.jpg', 0x4a90e2),
+                loadTexture(texturePath + '8k_earth_normal_map.jpg', 0x888888),
+                loadTexture(texturePath + '8k_earth_specular_map.jpg', 0x222222)
+            ];
             
-            textures.clouds = await loadTexture(texturePath + '8k_earth_clouds.jpg', 0xffffff);
-            console.log('clouds 텍스처 로딩 완료');
+            // 가장 중요한 텍스처들을 먼저 로딩
+            const [dayTexture, normalTexture, specularTexture] = await Promise.all(texturePromises);
             
-            textures.normal = await loadTexture(texturePath + '8k_earth_normal_map.jpg', 0x888888);
-            console.log('normal 텍스처 로딩 완료');
+            textures.day = dayTexture;
+            textures.normal = normalTexture;
+            textures.specular = specularTexture;
             
-            textures.specular = await loadTexture(texturePath + '8k_earth_specular_map.jpg', 0x222222);
-            console.log('specular 텍스처 로딩 완료');
+            console.log('주요 텍스처 로딩 완료, 지구본 생성 시작');
             
-            textures.night = await loadTexture(texturePath + '8k_earth_nightmap.jpg', 0x1a1a2e);
-            console.log('night 텍스처 로딩 완료');
-            
-            console.log('모든 텍스처 로딩 완료, 지구본 생성 시작');
+            // 지구본을 먼저 생성하고 나머지 텍스처는 백그라운드에서 로딩
             createEarthGlobe();
             
+            // 나머지 텍스처들을 백그라운드에서 로딩
+            console.log('추가 텍스처 백그라운드 로딩 중...');
+            Promise.all([
+                loadTexture(texturePath + '8k_earth_clouds.jpg', 0xffffff),
+                loadTexture(texturePath + '8k_earth_nightmap.jpg', 0x1a1a2e)
+            ]).then(([cloudsTexture, nightTexture]) => {
+                textures.clouds = cloudsTexture;
+                textures.night = nightTexture;
+                console.log('추가 텍스처 로딩 완료');
+                
+                // 구름 레이어 추가
+                if (textures.clouds && earthGlobe) {
+                    addCloudsLayer();
+                }
+            }).catch(error => {
+                console.warn('추가 텍스처 로딩 실패:', error);
+            });
+            
         } catch (error) {
-            console.error('텍스처 로딩 중 오류 발생:', error);
+            console.error('주요 텍스처 로딩 중 오류 발생:', error);
             console.log('기본 지구본으로 대체합니다.');
             // 기본 지구본 생성 (투명하게 유지)
             if (!earthGlobe) {
@@ -435,6 +453,36 @@ function loadEarthGlobe() {
                 });
             }
         }
+    }
+    
+    // 구름 레이어 추가 함수
+    function addCloudsLayer() {
+        if (earthClouds) {
+            scene.remove(earthClouds);
+        }
+        
+        const cloudsGeometry = new THREE.SphereGeometry(1.52, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
+        const cloudsMaterial = new THREE.MeshPhongMaterial({
+            map: textures.clouds,
+            transparent: true,
+            opacity: 0, // 처음에는 투명하게 시작
+            blending: THREE.AdditiveBlending
+        });
+        
+        const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
+        clouds.scale.set(0.8, 0.8, 0.8);
+        clouds.position.set(0, 0, 0);
+        scene.add(clouds);
+        
+        // 구름도 회전하도록 저장
+        earthClouds = clouds;
+        
+        // 구름 부드러운 페이드인 애니메이션
+        gsap.to(cloudsMaterial, {
+            opacity: 0.3,
+            duration: 2,
+            ease: "power2.out"
+        });
     }
     
     // 지구본 생성 함수
@@ -479,33 +527,6 @@ function loadEarthGlobe() {
         });
         
         console.log('텍스처 지구본 생성 완료!');
-        
-        // 구름 레이어 생성
-        if (textures.clouds) {
-            const cloudsGeometry = new THREE.SphereGeometry(1.52, isLowEndDevice ? 32 : 64, isLowEndDevice ? 32 : 64);
-            const cloudsMaterial = new THREE.MeshPhongMaterial({
-                map: textures.clouds,
-                transparent: true,
-                opacity: 0, // 처음에는 투명하게 시작
-                blending: THREE.AdditiveBlending
-            });
-            
-            const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
-            clouds.scale.set(0.8, 0.8, 0.8);
-            clouds.position.set(0, 0, 0);
-            scene.add(clouds);
-            
-            // 구름도 회전하도록 저장
-            earthClouds = clouds;
-            
-            // 구름 부드러운 페이드인 애니메이션
-            gsap.to(cloudsMaterial, {
-                opacity: 0.3,
-                duration: 2,
-                ease: "power2.out",
-                delay: 0.5 // 지구본보다 조금 늦게 시작
-            });
-        }
         
         // Glow Sphere 생성 (이미 있으면 업데이트)
         if (!earthGlow) {
